@@ -598,18 +598,27 @@ function adjustPopupPosition() {
   // Di PC, biarkan CSS yang menengahkan popup, jangan di-override JS
   if (window.innerWidth >= 768) return;
 
-  const popup = document.getElementById('edit-price-popup');
-  if (!popup || popup.style.display === 'none') return;
+  const overlay = document.getElementById('edit-price-popup');
+  if (!overlay || overlay.style.display === 'none') return;
+
+  // Pastikan overlay menutupi layar penuh
+  overlay.style.top = '0';
+  overlay.style.left = '0';
+  overlay.style.width = '100%';
+  overlay.style.height = '100%';
+
+  const popup = overlay.querySelector('.popup-box');
+  if (!popup) return;
 
   const vp = window.visualViewport || window;
   const availableHeight = vp.height;
   const popupHeight = popup.offsetHeight || 260;
   const bottomSafe = 60;
 
-  let top = 60; // default jarak dari atas
+  let top = 60;
   const maxTop = availableHeight - popupHeight - bottomSafe;
   if (top > maxTop) {
-    top = Math.max(maxTop, 20); // minimal 20px dari atas
+    top = Math.max(maxTop, 20);
   }
 
   popup.style.top = top + 'px';
