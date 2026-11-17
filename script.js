@@ -586,7 +586,44 @@ window.openEditPrice = (cartId, currentPrice) => {
   document.getElementById('edit-price-popup').style.display = 'flex';
   document.getElementById('popup-backdrop').style.display = 'block';
   input.focus(); // paksa fokus agar keyboard muncul di HP
+
+  // Tunggu sebentar agar DOM render, baru hitung posisi popup
+  setTimeout(() => {
+    adjustPopupPosition();
+  }, 150);
 };
+
+// Sesuaikan posisi popup saat keyboard HP muncul / hilang (hanya HP)
+function adjustPopupPosition() {
+  // Di PC, biarkan CSS yang menengahkan popup, jangan di-override JS
+  if (window.innerWidth >= 768) return;
+
+  const popup = document.getElementById('edit-price-popup');
+  if (!popup || popup.style.display === 'none') return;
+
+  const vp = window.visualViewport || window;
+  const availableHeight = vp.height;
+  const popupHeight = popup.offsetHeight || 260;
+  const bottomSafe = 60;
+
+  let top = 60; // default jarak dari atas
+  const maxTop = availableHeight - popupHeight - bottomSafe;
+  if (top > maxTop) {
+    top = Math.max(maxTop, 20); // minimal 20px dari atas
+  }
+
+  popup.style.top = top + 'px';
+}
+
+// Deteksi resize visualViewport (keyboard muncul/hilang di HP)
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', () => {
+    const popup = document.getElementById('edit-price-popup');
+    if (popup && popup.style.display !== 'none') {
+      adjustPopupPosition();
+    }
+  });
+}
 window.closeEditPrice = () => {
   document.getElementById('edit-price-popup').style.display = 'none';
   document.getElementById('popup-backdrop').style.display = 'none';

@@ -422,8 +422,17 @@ button { cursor: pointer; border: none; border-radius: 8px; font-weight: 600; tr
   background: rgba(0,0,0,0.4);
   z-index: 2000;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  padding-top: 60px;
+  box-sizing: border-box;
+}
+
+@media (min-width: 768px) {
+  .popup-overlay {
+    align-items: center;
+    padding-top: 0;
+  }
 }
 .popup-box {
   background: white;
