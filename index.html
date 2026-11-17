@@ -142,8 +142,8 @@
                     <span>Total</span>
                     <span id="cart-total">Rp 0</span>
                 </div>
-                <input type="number" id="cash-paid" placeholder="Uang diterima (opsional, untuk hitung kembalian)"
-                    oninput="hitungKembalian()" />
+                <input type="text" inputmode="decimal" id="cash-paid" placeholder="Uang diterima (opsional, untuk hitung kembalian)"
+                    oninput="cleanRupiahInput(this); hitungKembalian()" onblur="formatRupiahInput(this); hitungKembalian()" />
                 <div id="change-display" style="font-size:0.9rem; color:#16a34a; font-weight:600; margin-bottom:10px;">
                 </div>
                 <button class="btn-primary" onclick="simpanTransaksi()">Simpan Transaksi</button>

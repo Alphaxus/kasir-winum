@@ -429,7 +429,7 @@ window.hitungKembalian = () => {
   const disp = document.getElementById('change-display');
   if (!cashPaidEl || !disp) return;
 
-  const paid = Number(cashPaidEl.value);
+  const paid = window.parseRupiahInput(cashPaidEl.value);
   if (!paid || total === 0) { disp.textContent = ""; return; }
   const diff = paid - total;
   disp.style.color = diff >= 0 ? "#16a34a" : "#dc2626";
