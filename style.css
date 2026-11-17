@@ -417,6 +417,7 @@ button { cursor: pointer; border: none; border-radius: 8px; font-weight: 600; tr
     width: 100%;
   }
 }
+
 .popup-overlay {
   position: fixed;
   top: 0;

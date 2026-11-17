@@ -30,6 +30,87 @@ if (filterDateEl) filterDateEl.value = todayStr;
 
 const rupiah = (n) => "Rp " + Number(n).toLocaleString("id-ID");
 
+// Auto-format input harga: 13 -> 13.000, 13.5 -> 13.500
+window.formatRupiahInput = function(inputEl) {
+  let val = inputEl.value.replace(/[^0-9.]/g, '');
+  if (!val) {
+    inputEl.value = '';
+    return;
+  }
+
+  const hasDot = val.includes('.');
+
+  if (hasDot) {
+    const parts = val.split('.');
+    const intPart = parts[0].replace(/\D/g, '');
+    const decPart = (parts[1] || '').replace(/\D/g, '').slice(0, 3);
+    const paddedDec = decPart.padEnd(3, '0');
+    const formattedInt = intPart ? intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '0';
+    inputEl.value = formattedInt + '.' + paddedDec;
+  } else {
+    const formattedInt = val.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    inputEl.value = formattedInt + '.000';
+  }
+};
+
+// Bersihkan & format input harga secara real-time saat mengetik
+window.cleanRupiahInput = function(inputEl) {
+  const start = inputEl.selectionStart;
+  const end = inputEl.selectionEnd;
+  const originalValue = inputEl.value;
+
+  // Hapus semua karakter kecuali angka dan titik
+  let val = originalValue.replace(/[^0-9.]/g, '');
+
+  // Jika ada lebih dari satu titik, hanya simpan titik pertama
+  const dotCount = (val.match(/\./g) || []).length;
+  if (dotCount > 1) {
+    const firstDot = val.indexOf('.');
+    val = val.substring(0, firstDot + 1) + val.substring(firstDot + 1).replace(/\./g, '');
+  }
+
+  // Jika tidak ada titik, tambahkan .000
+  if (!val.includes('.')) {
+    val = val + '.000';
+  } else {
+    // Potong desimal maksimal 3 digit
+    const parts = val.split('.');
+    parts[1] = parts[1].replace(/\D/g, '').slice(0, 3);
+    val = parts.join('.');
+  }
+
+  inputEl.value = val;
+
+  // Kembalikan kursor ke posisi yang sesuai (hindari lompat ke akhir)
+  inputEl.setSelectionRange(start, end);
+};
+
+// Tampilkan format lengkap saat meninggalkan kolom (blur)
+window.formatRupiahInput = function(inputEl) {
+  let val = inputEl.value.replace(/[^0-9.]/g, '');
+  if (!val) {
+    inputEl.value = '';
+    return;
+  }
+
+  const dotIndex = val.lastIndexOf('.');
+  if (dotIndex > -1) {
+    const intPart = val.substring(0, dotIndex).replace(/\D/g, '');
+    const decPart = val.substring(dotIndex + 1).replace(/\D/g, '').slice(0, 3).padEnd(3, '0');
+    const formattedInt = intPart ? intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '0';
+    inputEl.value = formattedInt + '.' + decPart;
+  } else {
+    const formattedInt = val.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    inputEl.value = formattedInt + '.000';
+  }
+};
+
+// Parse string berformat titik kembali ke angka murni
+window.parseRupiahInput = function(str) {
+  if (!str) return 0;
+  return Number(str.replace(/\./g, ''));
+};
+
 // Fungsi Buka/Tutup Sidebar HP
 window.toggleSidebar = () => {
   const sidebar = document.getElementById('mobile-sidebar');
@@ -106,7 +187,7 @@ window.setChannelView = (ch, btn) => {
 window.tambahMenu = async () => {
   const name = document.getElementById('new-menu-name').value.trim();
   const category = document.getElementById('new-menu-category').value;
-  const price = Number(document.getElementById('new-menu-price').value);
+  const price = window.parseRupiahInput(document.getElementById('new-menu-price').value);
   if (!name || price <= 0) return alert("Isi nama menu dan harga dengan benar!");
 
   await addDoc(collection(db, "menus"), { name, category, price });
@@ -325,8 +406,8 @@ function renderCart() {
    return `
   <div class="cart-row">
     <div>
-      <b>${c.name}</b>${c.priceNote ? `<span class="cart-customer-badge">${c.priceNote}</span>` : ''}<br>
-      <small>${rupiah(c.price)} x ${c.qty}</small>
+      <b>${c.name} x ${c.qty}</b>${c.priceNote ? `<span class="cart-customer-badge">${c.priceNote}</span>` : ''}<br>
+      <small>${rupiah(c.price)} </small>
       <button class="edit-price-btn" onclick="openEditPrice('${c.id}', ${c.price})">Edit</button>
     </div>
     <div class="qty-controls">
@@ -570,8 +651,10 @@ window.renderPriceList = () => {
             <div class="price-category">${m.category || 'Makanan'}</div>
             ${customPrice !== undefined ? `<div class="price-default">Harga custom saat ini: ${rupiah(customPrice)}</div>` : `<div class="price-default">Harga default: ${rupiah(m.price)}</div>`}
           </div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <input type="number" class="custom-price-input" id="custom-price-${m.id}" placeholder="Harga baru" value="${customPrice !== undefined ? customPrice : ''}">
+            <div style="display:flex; align-items:center; gap:8px;">
+            <div class="price-input-wrapper" style="width:auto; min-width:140px;">
+              <input type="text" class="custom-price-input" id="custom-price-${m.id}" placeholder="Harga baru" value="${customPrice !== undefined ? customPrice : ''}" oninput="cleanRupiahInput(this)" onblur="formatRupiahInput(this)" />
+            </div>
             <button class="price-save-btn" onclick="simpanHargaPelanggan('${m.id}')">Simpan</button>
           </div>
         </div>
@@ -586,6 +669,9 @@ window.openEditPrice = (cartId, currentPrice) => {
   document.getElementById('edit-price-popup').style.display = 'flex';
   document.getElementById('popup-backdrop').style.display = 'block';
   input.focus(); // paksa fokus agar keyboard muncul di HP
+
+  // Push state agar tombol back HP bisa menutup popup
+  history.pushState({ editPricePopup: true }, '');
 
   // Tunggu sebentar agar DOM render, baru hitung posisi popup
   setTimeout(() => {
@@ -637,10 +723,15 @@ window.closeEditPrice = () => {
   document.getElementById('edit-price-popup').style.display = 'none';
   document.getElementById('popup-backdrop').style.display = 'none';
   editingCartId = null;
+
+  // Hapus state yang di-push saat popup dibuka
+  if (history.state && history.state.editPricePopup) {
+    history.back();
+  }
 };
 window.simpanEditHarga = async () => {
   const input = document.getElementById('edit-price-input');
-  const newPrice = Number(input.value);
+  const newPrice = input ? window.parseRupiahInput(input.value) : null;
   
   if (!newPrice || newPrice <= 0) {
     return alert("Masukkan harga yang valid!");
@@ -668,7 +759,23 @@ window.simpanEditHarga = async () => {
   closeEditPrice();
 };
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeEditPrice();
+  const popup = document.getElementById('edit-price-popup');
+  if (!popup || popup.style.display === 'none') return;
+
+  if (e.key === 'Escape') {
+    closeEditPrice();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    simpanEditHarga();
+  }
+});
+
+// Handle tombol back HP (Android hardware back) untuk menutup popup
+window.addEventListener('popstate', () => {
+  const popup = document.getElementById('edit-price-popup');
+  if (popup && popup.style.display !== 'none') {
+    closeEditPrice();
+  }
 });
 // Simpan harga custom untuk menu item tertentu ke pelanggan
 window.simpanHargaPelanggan = async (menuId) => {
@@ -677,7 +784,7 @@ window.simpanHargaPelanggan = async (menuId) => {
   if (!customerId) return alert("Pilih pelanggan terlebih dahulu!");
 
   const input = document.getElementById(`custom-price-${menuId}`);
-  const newPrice = input ? Number(input.value) : null;
+  const newPrice = input ? window.parseRupiahInput(input.value) : null;
 
   if (newPrice === null || newPrice === '' || isNaN(newPrice)) {
     // Kosongkan = hapus harga custom, kembali ke default
