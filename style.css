@@ -416,6 +416,57 @@ button { cursor: pointer; border: none; border-radius: 8px; font-weight: 600; tr
     width: 100%;
   }
 }
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.popup-box {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 320px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+.popup-title {
+  font-weight: 600;
+  margin-bottom: 12px;
+  text-align: center;
+}
+.popup-box input {
+  width: 100%;
+  padding: 10px;
+  font-size: 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+.popup-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+.popup-actions button {
+  flex: 1;
+  padding: 8px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+.popup-actions button:first-child {
+  background: #f3f4f6;
+  color: #374151;
+}
+.btn-simpan {
+  background: #ea580c;
+  color: white;
+}
 
 /* Bottom Navigation */
 nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around; padding: 8px 0; z-index: 20; }

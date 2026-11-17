@@ -21,7 +21,8 @@
                 style="background:none; border:none; font-size:1.2rem; cursor:pointer;">✕</button>
         </div>
         <div class="channel-group vertical">
-            <button class="channel-btn active" onclick="setChannelView('Offline', this); toggleSidebar()">🏪 Offline</button>
+            <button class="channel-btn active" onclick="setChannelView('Offline', this); toggleSidebar()">🏪
+                Offline</button>
             <button class="channel-btn" onclick="setChannelView('Online', this); toggleSidebar()">🟢 Online</button>
         </div>
     </div>
@@ -47,28 +48,36 @@
         </div>
 
         <!-- Indikator mode saat ini -->
-        <div id="channel-indicator" style="margin-bottom:12px; font-size:0.85rem; color:#6b7280; padding:8px 12px; background:#f3f4f6; border-radius:8px; display:inline-block; width:100%;">
+        <div id="channel-indicator"
+            style="margin-bottom:12px; font-size:0.85rem; color:#6b7280; padding:8px 12px; background:#f3f4f6; border-radius:8px; display:inline-block; width:100%;">
             <strong>Mode:</strong> <span id="channel-mode-text">Offline</span>
         </div>
 
         <!-- TAB 1: KASIR -->
         <div id="tab-kasir" class="tab-content active">
             <!-- Pilih Pelanggan (hanya di Kasir) -->
-            <div id="customer-selector" style="margin-bottom:12px; padding:10px 12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; width:100%; position:relative;">
+            <div id="customer-selector"
+                style="margin-bottom:12px; padding:10px 12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; width:100%; position:relative;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div>
                         <div style="font-size:0.75rem; color:#6b7280;">Pelanggan</div>
                         <div style="font-weight:600; color:#166534;" id="selected-customer-display">Belum dipilih</div>
                     </div>
-                    <button onclick="toggleCustomerDropdown(this)" style="background:none; border:none; color:#16a34a; font-weight:600; font-size:0.85rem; cursor:pointer;">Pilih Pelanggan ▼</button>
+                    <button onclick="toggleCustomerDropdown(this)"
+                        style="background:none; border:none; color:#16a34a; font-weight:600; font-size:0.85rem; cursor:pointer;">Pilih
+                        Pelanggan ▼</button>
                 </div>
-                <div id="customer-dropdown-list" style="display:none; max-height:240px; overflow-y:auto; border:1px solid #e5e7eb; border-radius:8px; background:#fff; z-index:1000; position:absolute; top:100%; left:0; right:0; box-shadow:0 8px 24px rgba(0,0,0,0.15); margin-top:6px;">
-                    <div style="padding:8px 12px; border-bottom:1px solid #f3f4f6; font-size:0.8rem; color:#6b7280;">Pilih pelanggan</div>
+                <div id="customer-dropdown-list"
+                    style="display:none; max-height:240px; overflow-y:auto; border:1px solid #e5e7eb; border-radius:8px; background:#fff; z-index:1000; position:absolute; top:100%; left:0; right:0; box-shadow:0 8px 24px rgba(0,0,0,0.15); margin-top:6px;">
+                    <div style="padding:8px 12px; border-bottom:1px solid #f3f4f6; font-size:0.8rem; color:#6b7280;">
+                        Pilih pelanggan</div>
                     <div id="customer-dropdown-items">
                         <!-- diisi oleh JS -->
                     </div>
                     <div style="padding:8px 12px; font-size:0.8rem; color:#6b7280; border-top:1px solid #f3f4f6;">
-                        <button onclick="resetCustomer()" style="width:100%; background:none; border:none; color:#dc2626; font-weight:600; cursor:pointer;">Reset Pelanggan</button>
+                        <button onclick="resetCustomer()"
+                            style="width:100%; background:none; border:none; color:#dc2626; font-weight:600; cursor:pointer;">Reset
+                            Pelanggan</button>
                     </div>
                 </div>
             </div>
@@ -81,16 +90,19 @@
                         <div class="menu-category-title-section">
                             <div class="menu-category-main-title">Makanan</div>
                         </div>
-                        <div class="menu-category-dropdown-wrapper" style="position:relative; display:inline-block; width:100%;">
+                        <div class="menu-category-dropdown-wrapper"
+                            style="position:relative; display:inline-block; width:100%;">
                             <div class="menu-category-add-section" onclick="toggleCategory('makanan', this)">
                                 <div class="menu-category-logo">🍔</div>
                                 <div class="menu-category-add-label">+ Tambah Makanan</div>
                                 <span class="menu-category-toggle">▼</span>
                             </div>
                             <div class="menu-dropdown-overlay" id="menu-makanan-list" style="display:none;">
-                                <input type="text" class="menu-search" placeholder="Cari makanan..." oninput="filterMenu('makanan', this.value)">
+                                <input type="text" class="menu-search" placeholder="Cari makanan..."
+                                    oninput="filterMenu('makanan', this.value)">
                                 <div class="menu-items-list" id="menu-makanan-items">
-                                    <p style="color:#9ca3af; font-size:0.85rem;">Klik "+ Tambah Makanan" untuk menampilkan daftar.</p>
+                                    <p style="color:#9ca3af; font-size:0.85rem;">Klik "+ Tambah Makanan" untuk
+                                        menampilkan daftar.</p>
                                 </div>
                             </div>
                         </div>
@@ -101,16 +113,19 @@
                         <div class="menu-category-title-section">
                             <div class="menu-category-main-title">Minuman</div>
                         </div>
-                        <div class="menu-category-dropdown-wrapper" style="position:relative; display:inline-block; width:100%;">
+                        <div class="menu-category-dropdown-wrapper"
+                            style="position:relative; display:inline-block; width:100%;">
                             <div class="menu-category-add-section" onclick="toggleCategory('minuman', this)">
                                 <div class="menu-category-logo">🥤</div>
                                 <div class="menu-category-add-label">+ Tambah Minuman</div>
                                 <span class="menu-category-toggle">▼</span>
                             </div>
                             <div class="menu-dropdown-overlay" id="menu-minuman-list" style="display:none;">
-                                <input type="text" class="menu-search" placeholder="Cari minuman..." oninput="filterMenu('minuman', this.value)">
+                                <input type="text" class="menu-search" placeholder="Cari minuman..."
+                                    oninput="filterMenu('minuman', this.value)">
                                 <div class="menu-items-list" id="menu-minuman-items">
-                                    <p style="color:#9ca3af; font-size:0.85rem;">Klik "+ Tambah Minuman" untuk menampilkan daftar.</p>
+                                    <p style="color:#9ca3af; font-size:0.85rem;">Klik "+ Tambah Minuman" untuk
+                                        menampilkan daftar.</p>
                                 </div>
                             </div>
                         </div>
@@ -120,14 +135,17 @@
 
             <div class="card">
                 <h3>Keranjang Pesanan</h3>
-                <div id="cart-items"><p style="color:#9ca3af; font-size:0.85rem;">Belum ada item dipilih.</p></div>
+                <div id="cart-items">
+                    <p style="color:#9ca3af; font-size:0.85rem;">Belum ada item dipilih.</p>
+                </div>
                 <div class="total-box">
                     <span>Total</span>
                     <span id="cart-total">Rp 0</span>
                 </div>
                 <input type="number" id="cash-paid" placeholder="Uang diterima (opsional, untuk hitung kembalian)"
                     oninput="hitungKembalian()" />
-                <div id="change-display" style="font-size:0.9rem; color:#16a34a; font-weight:600; margin-bottom:10px;"></div>
+                <div id="change-display" style="font-size:0.9rem; color:#16a34a; font-weight:600; margin-bottom:10px;">
+                </div>
                 <button class="btn-primary" onclick="simpanTransaksi()">Simpan Transaksi</button>
             </div>
         </div>
@@ -196,7 +214,8 @@
                     <option value="">-- Pilih Pelanggan --</option>
                 </select>
                 <div id="price-list" style="margin-top:12px;"></div>
-                <p style="font-size:0.8rem; color:#6b7280; margin-top:8px;">Kosongkan input untuk menggunakan harga default.</p>
+                <p style="font-size:0.8rem; color:#6b7280; margin-top:8px;">Kosongkan input untuk menggunakan harga
+                    default.</p>
             </div>
         </div>
     </div>
@@ -209,7 +228,17 @@
         <button onclick="switchTab('pelanggan', this)"><span>👥</span>Pelanggan</button>
         <button onclick="switchTab('harga', this)"><span>💰</span>Harga</button>
     </nav>
-
+    <div id="edit-price-popup" class="popup-overlay" style="display:none;">
+        <div class="popup-box">
+            <div class="popup-title">Edit Harga</div>
+            <input type="number" id="edit-price-input" placeholder="Masukkan harga baru" autofocus />
+            <div class="popup-actions">
+                <button onclick="closeEditPrice()">Batal</button>
+                <button class="btn-simpan" onclick="simpanEditHarga()">Simpan</button>
+            </div>
+        </div>
+    </div>
+    <div id="popup-backdrop" class="popup-backdrop" style="display:none;" onclick="closeEditPrice()"></div>
     <script type="module" src="script.js"></script>
 </body>
 

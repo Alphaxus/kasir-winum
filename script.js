@@ -13,7 +13,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
-
+let editingCartId = null;
 let menus = [];
 let transactions = [];
 let cart = [];
@@ -73,6 +73,7 @@ onSnapshot(query(collection(db, "customers"), orderBy("name")), (snapshot) => {
 onSnapshot(query(collection(db, "customerPrices"), orderBy("customerId")), (snapshot) => {
   customerPrices = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
   renderPriceList();
+  hitungUlangHargaCart(selectedCustomerId);
 }, (err) => {
   console.error("Gagal memuat harga pelanggan:", err);
 });
@@ -185,6 +186,28 @@ window.filterMenu = (category, searchText) => {
   `).join('');
 };
 
+function hitungUlangHargaCart(customerId) {
+  cart.forEach(item => {
+    const menu = menus.find(m => m.id === item.id);
+    if (!menu) return;
+
+    let newPrice = menu.price;
+    let note = "";
+
+    if (customerId) {
+      const cp = customerPrices.find(p => p.customerId === customerId && p.menuId === item.id);
+      if (cp && cp.price) {
+        newPrice = cp.price;
+        note = " (Harga Pelanggan)";
+      }
+    }
+
+    item.price = newPrice;
+    item.priceNote = note;
+  });
+
+  renderCart(); // tampilkan ulang keranjang dengan harga baru
+}
 // Render Menu di Tab Kasir & Tab Kelola Menu
 function renderMenus() {
   const kasirMakananItemsEl = document.getElementById('menu-makanan-items');
@@ -256,10 +279,15 @@ window.addToCart = (id) => {
       priceNote = ' (Harga Pelanggan)';
     }
   }
-  const item = { ...baseItem, price, qty: 1, priceNote };
-  const existing = cart.find(c => c.id === id && c.price === price);
-  if (existing) existing.qty += 1;
-  else cart.push(item);
+  
+  const existing = cart.find(c => c.id === id);  // ← cuma cek id, bukan price
+  if (existing) {
+    existing.qty += 1;
+    existing.price = price;      // ← update ke harga terbaru
+    existing.priceNote = priceNote;
+  } else {
+    cart.push({ ...baseItem, price, qty: 1, priceNote });
+  }
   renderCart();
 
   // Tutup semua dropdown setelah memilih menu
@@ -294,16 +322,20 @@ function renderCart() {
   cartEl.innerHTML = cart.map(c => {
     const sub = c.price * c.qty;
     total += sub;
-    return `
-      <div class="cart-row">
-        <div><b>${c.name}</b>${c.priceNote ? `<span class="cart-customer-badge">${c.priceNote}</span>` : ''}<br><small>${rupiah(c.price)} x ${c.qty}</small></div>
-        <div class="qty-controls">
-          <button class="qty-btn" onclick="updateQty('${c.id}', -1)">-</button>
-          <span>${c.qty}</span>
-          <button class="qty-btn" onclick="updateQty('${c.id}', 1)">+</button>
-        </div>
-      </div>
-    `;
+   return `
+  <div class="cart-row">
+    <div>
+      <b>${c.name}</b>${c.priceNote ? `<span class="cart-customer-badge">${c.priceNote}</span>` : ''}<br>
+      <small>${rupiah(c.price)} x ${c.qty}</small>
+      <button class="edit-price-btn" onclick="openEditPrice('${c.id}', ${c.price})">Edit</button>
+    </div>
+    <div class="qty-controls">
+      <button class="qty-btn" onclick="updateQty('${c.id}', -1)">-</button>
+      <span>${c.qty}</span>
+      <button class="qty-btn" onclick="updateQty('${c.id}', 1)">+</button>
+    </div>
+  </div>
+`;
   }).join('');
 
   document.getElementById('cart-total').textContent = rupiah(total);
@@ -474,7 +506,9 @@ window.toggleCustomerDropdown = (btn) => {
 
 // Pilih pelanggan di kasir
 window.pilihPelanggan = (id, name) => {
+
   selectedCustomerId = id;
+  hitungUlangHargaCart(id); // update harga di keranjang sesuai pelanggan
   selectedCustomerName = name;
   document.getElementById('selected-customer-display').textContent = name;
   document.getElementById('customer-dropdown-list').style.display = 'none';
@@ -544,7 +578,52 @@ window.renderPriceList = () => {
       `;
     }).join('');
 };
+window.openEditPrice = (cartId, currentPrice) => {
+  editingCartId = cartId;
+  const input = document.getElementById('edit-price-input');
+  input.placeholder = `Harga saat ini: ${rupiah(currentPrice)}`;
+  input.value = '';
+  document.getElementById('edit-price-popup').style.display = 'flex';
+  document.getElementById('popup-backdrop').style.display = 'block';
+  input.focus(); // paksa fokus agar keyboard muncul di HP
+};
+window.closeEditPrice = () => {
+  document.getElementById('edit-price-popup').style.display = 'none';
+  document.getElementById('popup-backdrop').style.display = 'none';
+  editingCartId = null;
+};
+window.simpanEditHarga = async () => {
+  const input = document.getElementById('edit-price-input');
+  const newPrice = Number(input.value);
+  
+  if (!newPrice || newPrice <= 0) {
+    return alert("Masukkan harga yang valid!");
+  }
 
+  // 1. Update item di cart
+  const item = cart.find(c => c.id === editingCartId);
+  if (item) {
+    item.price = newPrice;
+    item.priceNote = " (Edit Manual)";
+  }
+
+  // 2. Jika ada pelanggan yang dipilih, update juga customerPrices di Firebase
+  if (selectedCustomerId && editingCartId) {
+    const existing = customerPrices.find(p => p.customerId === selectedCustomerId && p.menuId === editingCartId);
+    if (existing) {
+      await addDoc(collection(db, "customerPrices"), { customerId: selectedCustomerId, menuId: editingCartId, price: newPrice, updatedAt: new Date().getTime() });
+      await deleteDoc(doc(db, "customerPrices", existing.id));
+    } else {
+      await addDoc(collection(db, "customerPrices"), { customerId: selectedCustomerId, menuId: editingCartId, price: newPrice, createdAt: new Date().getTime() });
+    }
+  }
+
+  renderCart();
+  closeEditPrice();
+};
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeEditPrice();
+});
 // Simpan harga custom untuk menu item tertentu ke pelanggan
 window.simpanHargaPelanggan = async (menuId) => {
   const customerSelect = document.getElementById('price-customer-select');
@@ -571,8 +650,12 @@ window.simpanHargaPelanggan = async (menuId) => {
     } else {
       await addDoc(collection(db, "customerPrices"), { customerId, menuId, price: newPrice, createdAt: new Date().getTime() });
     }
+
     alert("Harga berhasil disimpan!");
+
   }
+  hitungUlangHargaCart(selectedCustomerId);
   renderPriceList();
   renderMenus();
+
 };
