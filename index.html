@@ -187,7 +187,7 @@
                     <option value="Minuman">Minuman</option>
                 </select>
                 <div class="price-input-wrapper">
-                  <input type="text" id="new-menu-price" placeholder="Harga Default (contoh: 15000)" oninput="cleanRupiahInput(this)" onblur="formatRupiahInput(this)" />
+                  <input type="text" inputmode="decimal" id="new-menu-price" placeholder="Harga Default (contoh: 15000)" oninput="cleanRupiahInput(this)" onblur="formatRupiahInput(this)" />
                 </div>
                 <button class="btn-primary" onclick="tambahMenu()">+ Tambah Menu</button>
             </div>
@@ -234,7 +234,7 @@
         <div class="popup-box">
             <div class="popup-title">Edit Harga</div>
             <div class="price-input-wrapper">
-              <input type="text" id="edit-price-input" placeholder="Masukkan harga baru" autofocus oninput="cleanRupiahInput(this)" onblur="formatRupiahInput(this)" />
+              <input type="text" inputmode="decimal" id="edit-price-input" placeholder="Masukkan harga baru" autofocus oninput="cleanRupiahInput(this)" onblur="formatRupiahInput(this)" />
             </div>
             <div class="popup-actions">
                 <button onclick="closeEditPrice()">Batal</button>

@@ -653,7 +653,7 @@ window.renderPriceList = () => {
           </div>
             <div style="display:flex; align-items:center; gap:8px;">
             <div class="price-input-wrapper" style="width:auto; min-width:140px;">
-              <input type="text" class="custom-price-input" id="custom-price-${m.id}" placeholder="Harga baru" value="${customPrice !== undefined ? customPrice : ''}" oninput="cleanRupiahInput(this)" onblur="formatRupiahInput(this)" />
+              <input type="text" inputmode="decimal" class="custom-price-input" id="custom-price-${m.id}" placeholder="Harga baru" value="${customPrice !== undefined ? customPrice : ''}" oninput="cleanRupiahInput(this)" onblur="formatRupiahInput(this)" />
             </div>
             <button class="price-save-btn" onclick="simpanHargaPelanggan('${m.id}')">Simpan</button>
           </div>
