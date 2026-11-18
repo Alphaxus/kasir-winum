@@ -230,11 +230,12 @@
         <button onclick="switchTab('pelanggan', this)"><span>👥</span>Pelanggan</button>
         <button onclick="switchTab('harga', this)"><span>💰</span>Harga</button>
     </nav>
-    <div id="edit-price-popup" class="popup-overlay" style="display:none;">
-        <div class="popup-box">
+    <div id="edit-price-popup" class="popup-overlay" style="display:none;" onclick="closeEditPrice()">
+            <div class="popup-box" onclick="event.stopPropagation()">
             <div class="popup-title">Edit Harga</div>
+            <div id="edit-price-langganan-label" style="font-size:0.8rem; color:#6b7280; margin-bottom:8px;"></div>
             <div class="price-input-wrapper">
-              <input type="text" inputmode="decimal" id="edit-price-input" placeholder="Masukkan harga baru" autofocus oninput="cleanRupiahInput(this)" onblur="formatRupiahInput(this)" />
+              <input type="text" inputmode="decimal" id="edit-price-input" placeholder="Masukkan harga baru" autofocus onfocus="focusRupiahInput(this)" oninput="cleanRupiahInput(this)" onblur="formatRupiahInput(this)" />
             </div>
             <div class="popup-actions">
                 <button onclick="closeEditPrice()">Batal</button>

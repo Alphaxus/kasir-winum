@@ -329,14 +329,63 @@ button { cursor: pointer; border: none; border-radius: 8px; font-weight: 600; tr
   font-size: 0.85rem;
 }
 .price-save-btn {
+  position: absolute;
+  right: 2px;
+  top: 3px;
+  bottom: 3px;
+  width: 32px;
   background: #16a34a;
   color: white;
   border: none;
   border-radius: 6px;
-  padding: 6px 12px;
-  font-size: 0.8rem;
+  font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+.price-save-btn:hover {
+  background: #15803d;
+}
+.price-save-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Override global input padding for custom price input */
+.custom-price-input {
+  width: 100% !important;
+  padding: 0 34px 0 10px !important;
+  height: 36px !important;
+  box-sizing: border-box !important;
+}
+
+.price-input-wrapper {
+  position: relative;
+  display: block;
+  width: 100%;
+  flex: 1;
+}
+
+.price-save-btn {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  bottom: 2px;
+  width: 32px;
+  background: #16a34a;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
 }
 .price-save-btn:hover {
   background: #15803d;

@@ -14,6 +14,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 let editingCartId = null;
+let editingPriceMenuId = null;
+let editingPriceCustomerId = null;
 let menus = [];
 let transactions = [];
 let cart = [];
@@ -32,6 +34,13 @@ const rupiah = (n) => "Rp " + Number(n).toLocaleString("id-ID");
 
 // Auto-format input harga: 13 -> 13.000, 13.5 -> 13.500
 window.formatRupiahInput = function(inputEl) {
+  // Jika kosong dan ada nilai asli yang disimpan, kembalikan nilai asli
+  if (!inputEl.value.trim() && inputEl.dataset.originalValue) {
+    inputEl.value = inputEl.dataset.originalValue;
+    delete inputEl.dataset.originalValue;
+    return;
+  }
+
   let val = inputEl.value.replace(/[^0-9.]/g, '');
   if (!val) {
     inputEl.value = '';
@@ -51,6 +60,14 @@ window.formatRupiahInput = function(inputEl) {
     const formattedInt = val.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
     inputEl.value = formattedInt + '.000';
   }
+};
+
+// Simpan nilai asli dan kosongkan field saat difokus (agar admin bisa ketik baru segera)
+window.focusRupiahInput = function(inputEl) {
+  if (!inputEl.dataset.originalValue) {
+    inputEl.dataset.originalValue = inputEl.value;
+  }
+  inputEl.value = '';
 };
 
 // Bersihkan & format input harga secara real-time saat mengetik
@@ -241,6 +258,11 @@ document.addEventListener('click', (e) => {
     const customerListEl = document.getElementById('customer-dropdown-list');
     if (customerListEl) customerListEl.style.display = 'none';
   }
+  // Tutup popup edit harga dan kembalikan nilai asli saat klik di luar popup
+  const popup = document.getElementById('edit-price-popup');
+  if (popup && popup.style.display !== 'none' && !e.target.closest('.popup-box')) {
+    closeEditPrice();
+  }
 });
 
 // Filter menu berdasarkan pencarian
@@ -408,7 +430,7 @@ function renderCart() {
     <div>
       <b>${c.name} x ${c.qty}</b>${c.priceNote ? `<span class="cart-customer-badge">${c.priceNote}</span>` : ''}<br>
       <small>${rupiah(c.price)} </small>
-      <button class="edit-price-btn" onclick="openEditPrice('${c.id}', ${c.price})">Edit</button>
+      <button class="edit-price-btn" onclick="event.stopPropagation(); openEditPrice('${c.id}', ${c.price})">Edit</button>
     </div>
     <div class="qty-controls">
       <button class="qty-btn" onclick="updateQty('${c.id}', -1)">-</button>
@@ -644,39 +666,79 @@ window.renderPriceList = () => {
   listEl.innerHTML = `<div style="font-weight:600; color:#166534; margin-bottom:8px;">Edit Harga untuk: <span style="color:#16a34a;">${customer.name}</span></div>` +
     menus.map(m => {
       const customPrice = customerPriceMap[m.id];
+      const hasCustom = customPrice !== undefined;
       return `
         <div class="price-list-item">
           <div class="price-info">
             <div class="price-name">${m.name}</div>
             <div class="price-category">${m.category || 'Makanan'}</div>
-            ${customPrice !== undefined ? `<div class="price-default">Harga custom saat ini: ${rupiah(customPrice)}</div>` : `<div class="price-default">Harga default: ${rupiah(m.price)}</div>`}
+            <div style="font-size:0.8rem; color:#6b7280; margin-top:2px;">Harga Default: ${rupiah(m.price)}</div>
           </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-            <div class="price-input-wrapper" style="width:auto; min-width:140px;">
-              <input type="text" inputmode="decimal" class="custom-price-input" id="custom-price-${m.id}" placeholder="Harga baru" value="${customPrice !== undefined ? customPrice : ''}" oninput="cleanRupiahInput(this)" onblur="formatRupiahInput(this)" />
-            </div>
-            <button class="price-save-btn" onclick="simpanHargaPelanggan('${m.id}')">Simpan</button>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+            <div style="font-size:0.8rem; color:${hasCustom ? '#16a34a' : '#9ca3af'};">${hasCustom ? rupiah(customPrice) : 'Belum diatur'}</div>
+            <button class="btn-danger" style="padding:6px 10px; font-size:0.8rem;" onclick="event.stopPropagation(); editMenuPrice('${m.id}', '${customerId}', ${m.price}, ${hasCustom ? customPrice : 0})">Edit</button>
           </div>
         </div>
       `;
     }).join('');
 };
+
+// Edit harga menu untuk pelanggan tertentu — buka popup form
+window.editMenuPrice = (menuId, customerId, defaultPrice, currentCustomPrice) => {
+  editingPriceMenuId = menuId;
+  editingPriceCustomerId = customerId;
+  const input = document.getElementById('edit-price-input');
+  input.placeholder = `Harga default: ${rupiah(defaultPrice)}`;
+  
+  // Tampilkan label Harga Langganan
+  const langgananLabel = document.getElementById('edit-price-langganan-label');
+  if (langgananLabel) {
+    if (currentCustomPrice) {
+      langgananLabel.textContent = `Harga Langganan saat ini: ${rupiah(currentCustomPrice)}`;
+      langgananLabel.style.color = '#16a34a';
+    } else {
+      langgananLabel.textContent = 'Harga Langganan saat ini: Belum diatur';
+      langgananLabel.style.color = '#9ca3af';
+    }
+  }
+  
+  // Simpan nilai asli dan kosongkan field sebelum popup ditampilkan
+  focusRupiahInput(input);
+  document.getElementById('edit-price-popup').style.display = 'flex';
+  document.getElementById('popup-backdrop').style.display = 'block';
+
+  history.pushState({ editPricePopup: true }, '');
+
+  // Focus setelah popup ditampilkan
+  setTimeout(() => {
+    input.focus();
+    adjustPopupPosition();
+  }, 100);
+};
 window.openEditPrice = (cartId, currentPrice) => {
   editingCartId = cartId;
   const input = document.getElementById('edit-price-input');
   input.placeholder = `Harga saat ini: ${rupiah(currentPrice)}`;
-  input.value = '';
+  
+  // Sembunyikan label Harga Langganan saat edit dari keranjang
+  const langgananLabel = document.getElementById('edit-price-langganan-label');
+  if (langgananLabel) {
+    langgananLabel.textContent = '';
+  }
+  
+  // Simpan nilai asli dan kosongkan field sebelum popup ditampilkan
+  focusRupiahInput(input);
   document.getElementById('edit-price-popup').style.display = 'flex';
   document.getElementById('popup-backdrop').style.display = 'block';
-  input.focus(); // paksa fokus agar keyboard muncul di HP
 
   // Push state agar tombol back HP bisa menutup popup
   history.pushState({ editPricePopup: true }, '');
 
-  // Tunggu sebentar agar DOM render, baru hitung posisi popup
+  // Focus setelah popup ditampilkan (keyboard muncul di HP)
   setTimeout(() => {
+    input.focus();
     adjustPopupPosition();
-  }, 150);
+  }, 100);
 };
 
 // Sesuaikan posisi popup saat keyboard HP muncul / hilang (hanya HP)
@@ -720,13 +782,30 @@ if (window.visualViewport) {
   });
 }
 window.closeEditPrice = () => {
+  const input = document.getElementById('edit-price-input');
+  // Trigger blur agar formatRupiahInput bisa memulihkan nilai asli via onblur
+  if (input) input.blur();
+  // Pastikan nilai asli dikembalikan jika masih ada dataset
+  if (input && input.dataset.originalValue) {
+    input.value = input.dataset.originalValue;
+    delete input.dataset.originalValue;
+  }
+
+  // Reset label Harga Langganan
+  const langgananLabel = document.getElementById('edit-price-langganan-label');
+  if (langgananLabel) {
+    langgananLabel.textContent = '';
+  }
+
   document.getElementById('edit-price-popup').style.display = 'none';
   document.getElementById('popup-backdrop').style.display = 'none';
   editingCartId = null;
+  editingPriceMenuId = null;
+  editingPriceCustomerId = null;
 
-  // Hapus state yang di-push saat popup dibuka
+  // Hapus state yang di-push saat popup dibuka (tanpa navigasi)
   if (history.state && history.state.editPricePopup) {
-    history.back();
+    history.replaceState(null, '');
   }
 };
 window.simpanEditHarga = async () => {
@@ -737,7 +816,23 @@ window.simpanEditHarga = async () => {
     return alert("Masukkan harga yang valid!");
   }
 
-  // 1. Update item di cart
+  // Jika editing dari tab Harga (menu price untuk pelanggan)
+  if (editingPriceMenuId && editingPriceCustomerId) {
+    const existing = customerPrices.find(p => p.customerId === editingPriceCustomerId && p.menuId === editingPriceMenuId);
+    if (existing) {
+      await addDoc(collection(db, "customerPrices"), { customerId: editingPriceCustomerId, menuId: editingPriceMenuId, price: newPrice, updatedAt: new Date().getTime() });
+      await deleteDoc(doc(db, "customerPrices", existing.id));
+    } else {
+      await addDoc(collection(db, "customerPrices"), { customerId: editingPriceCustomerId, menuId: editingPriceMenuId, price: newPrice, createdAt: new Date().getTime() });
+    }
+    alert("Harga langganan berhasil disimpan!");
+    renderPriceList();
+    renderMenus();
+    closeEditPrice();
+    return;
+  }
+
+  // 1. Update item di cart (editing dari keranjang kasir)
   const item = cart.find(c => c.id === editingCartId);
   if (item) {
     item.price = newPrice;
