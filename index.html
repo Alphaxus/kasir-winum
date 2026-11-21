@@ -21,9 +21,8 @@
                 style="background:none; border:none; font-size:1.2rem; cursor:pointer;">✕</button>
         </div>
         <div class="channel-group vertical">
-            <button class="channel-btn active" onclick="setChannelView('Offline', this); toggleSidebar()">🏪
-                Offline</button>
-            <button class="channel-btn" onclick="setChannelView('Online', this); toggleSidebar()">🟢 Online</button>
+            <button class="channel-btn active" onclick="setChannelView('Offline', this)">🏪 Offline</button>
+            <button class="channel-btn" onclick="setChannelView('Online', this)">🟢 Online</button>
         </div>
     </div>
 
@@ -38,15 +37,6 @@
     </header>
 
     <div class="container">
-        <!-- Channel Selector (PC) -->
-        <div class="desktop-channel-section">
-            <h3>1. Jenis Pesanan</h3>
-            <div class="channel-group">
-                <button class="channel-btn active" onclick="setChannelView('Offline', this)">🏪 Offline</button>
-                <button class="channel-btn" onclick="setChannelView('Online', this)">🟢 Online</button>
-            </div>
-        </div>
-
         <!-- Indikator mode saat ini -->
         <div id="channel-indicator"
             style="margin-bottom:12px; font-size:0.85rem; color:#6b7280; padding:8px 12px; background:#f3f4f6; border-radius:8px; display:inline-block; width:100%;">
@@ -55,23 +45,23 @@
 
         <!-- TAB 1: KASIR -->
         <div id="tab-kasir" class="tab-content active">
-            <!-- Pilih Pelanggan (hanya di Kasir) -->
-            <div id="customer-selector"
-                style="margin-bottom:12px; padding:10px 12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; width:100%; position:relative;">
+            <!-- Pilih Pelanggan (hanya di Offline) -->
+            <div id="customer-selector-offline"
+                style="margin-bottom:12px; padding:10px 12px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; width:100%; position:relative; pointer-events:auto;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div>
                         <div style="font-size:0.75rem; color:#6b7280;">Pelanggan</div>
                         <div style="font-weight:600; color:#166534;" id="selected-customer-display">Belum dipilih</div>
                     </div>
-                    <button onclick="toggleCustomerDropdown(this)"
+                    <button onclick="toggleCustomerDropdown(this, event)"
                         style="background:none; border:none; color:#16a34a; font-weight:600; font-size:0.85rem; cursor:pointer;">Pilih
                         Pelanggan ▼</button>
                 </div>
                 <div id="customer-dropdown-list"
-                    style="display:none; max-height:240px; overflow-y:auto; border:1px solid #e5e7eb; border-radius:8px; background:#fff; z-index:1000; position:absolute; top:100%; left:0; right:0; box-shadow:0 8px 24px rgba(0,0,0,0.15); margin-top:6px;">
+                    style="display:none; max-height:240px; overflow-y:auto; border:1px solid #e5e7eb; border-radius:8px; background:#fff; z-index:9999; position:absolute; top:100%; left:0; right:0; box-shadow:0 8px 24px rgba(0,0,0,0.15); margin-top:6px; min-width:250px;">
                     <div style="padding:8px 12px; border-bottom:1px solid #f3f4f6; font-size:0.8rem; color:#6b7280;">
                         Pilih pelanggan</div>
-                    <div id="customer-dropdown-items">
+                    <div id="customer-dropdown-items" style="pointer-events:auto;">
                         <!-- diisi oleh JS -->
                     </div>
                     <div style="padding:8px 12px; font-size:0.8rem; color:#6b7280; border-top:1px solid #f3f4f6;">
@@ -83,49 +73,126 @@
             </div>
 
             <div class="card">
-                <h3>Pilih Menu</h3>
-                <div class="menu-categories">
-                    <!-- Kolom Makanan -->
-                    <div class="menu-category-column">
-                        <div class="menu-category-title-section">
-                            <div class="menu-category-main-title">Makanan</div>
-                        </div>
-                        <div class="menu-category-dropdown-wrapper"
-                            style="position:relative; display:inline-block; width:100%;">
-                            <div class="menu-category-add-section" onclick="toggleCategory('makanan', this)">
-                                <div class="menu-category-logo">🍔</div>
-                                <div class="menu-category-add-label">+ Tambah Makanan</div>
-                                <span class="menu-category-toggle">▼</span>
+                <!-- Kasir Offline View -->
+                <div id="kasir-offline-view" style="display:block;">
+                    <h3>Pilih Menu</h3>
+                    <div class="menu-categories">
+                        <!-- Kolom Makanan -->
+                        <div class="menu-category-column">
+                            <div class="menu-category-title-section">
+                                <div class="menu-category-main-title">Makanan</div>
                             </div>
-                            <div class="menu-dropdown-overlay" id="menu-makanan-list" style="display:none;">
-                                <input type="text" class="menu-search" placeholder="Cari makanan..."
-                                    oninput="filterMenu('makanan', this.value)">
-                                <div class="menu-items-list" id="menu-makanan-items">
-                                    <p style="color:#9ca3af; font-size:0.85rem;">Klik "+ Tambah Makanan" untuk
-                                        menampilkan daftar.</p>
+                            <div class="menu-category-dropdown-wrapper"
+                                style="position:relative; display:inline-block; width:100%;">
+                                <div class="menu-category-add-section" onclick="toggleCategory('makanan', this)">
+                                    <div class="menu-category-logo">🍔</div>
+                                    <div class="menu-category-add-label">+ Tambah Makanan</div>
+                                    <span class="menu-category-toggle">▼</span>
+                                </div>
+                                <div class="menu-dropdown-overlay" id="menu-makanan-list" style="display:none;">
+                                    <input type="text" class="menu-search" placeholder="Cari makanan..."
+                                        oninput="filterMenu('makanan', this.value)">
+                                    <div class="menu-items-list" id="menu-makanan-items">
+                                        <p style="color:#9ca3af; font-size:0.85rem;">Klik "+ Tambah Makanan" untuk
+                                            menampilkan daftar.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Kolom Minuman -->
+                        <div class="menu-category-column">
+                            <div class="menu-category-title-section">
+                                <div class="menu-category-main-title">Minuman</div>
+                            </div>
+                            <div class="menu-category-dropdown-wrapper"
+                                style="position:relative; display:inline-block; width:100%;">
+                                <div class="menu-category-add-section" onclick="toggleCategory('minuman', this)">
+                                    <div class="menu-category-logo">🥤</div>
+                                    <div class="menu-category-add-label">+ Tambah Minuman</div>
+                                    <span class="menu-category-toggle">▼</span>
+                                </div>
+                                <div class="menu-dropdown-overlay" id="menu-minuman-list" style="display:none;">
+                                    <input type="text" class="menu-search" placeholder="Cari minuman..."
+                                        oninput="filterMenu('minuman', this.value)">
+                                    <div class="menu-items-list" id="menu-minuman-items">
+                                        <p style="color:#9ca3af; font-size:0.85rem;">Klik "+ Tambah Minuman" untuk
+                                            menampilkan daftar.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Kolom Minuman -->
-                    <div class="menu-category-column">
-                        <div class="menu-category-title-section">
-                            <div class="menu-category-main-title">Minuman</div>
-                        </div>
-                        <div class="menu-category-dropdown-wrapper"
-                            style="position:relative; display:inline-block; width:100%;">
-                            <div class="menu-category-add-section" onclick="toggleCategory('minuman', this)">
-                                <div class="menu-category-logo">🥤</div>
-                                <div class="menu-category-add-label">+ Tambah Minuman</div>
-                                <span class="menu-category-toggle">▼</span>
+                <!-- Kasir Online View -->
+                <div id="kasir-online-view" style="display:none;">
+                    <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; padding:12px; margin-bottom:12px;">
+                        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
+                            <div style="flex:1; min-width:120px;">
+                                <div style="font-size:0.75rem; color:#6b7280;">ID Pelanggan</div>
+                                <input type="text" id="online-customer-id" readonly style="background:#f3f4f6; font-weight:600;" />
                             </div>
-                            <div class="menu-dropdown-overlay" id="menu-minuman-list" style="display:none;">
-                                <input type="text" class="menu-search" placeholder="Cari minuman..."
-                                    oninput="filterMenu('minuman', this.value)">
-                                <div class="menu-items-list" id="menu-minuman-items">
-                                    <p style="color:#9ca3af; font-size:0.85rem;">Klik "+ Tambah Minuman" untuk
-                                        menampilkan daftar.</p>
+                            <div style="flex:1; min-width:150px;">
+                                <div style="font-size:0.75rem; color:#6b7280;">Nama Pelanggan (Opsional)</div>
+                                <input type="text" id="online-customer-name" placeholder="Nama pelanggan" />
+                            </div>
+                            <div style="flex:1; min-width:150px;">
+                                <div style="font-size:0.75rem; color:#6b7280;">Aplikasi Delivery</div>
+                                <select id="online-delivery-app" style="width:100%; padding:8px; border:1px solid #d1d5db; border-radius:6px;">
+                                    <option value="">-- Pilih Delivery App --</option>
+                                </select>
+                            </div>
+                            <div style="display:flex; align-items:flex-end;">
+                                <div style="font-size:0.75rem; color:#6b7280;">* ID otomatis bertambah saat transaksi disimpan</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3>Pilih Menu</h3>
+                    <div class="menu-categories">
+                        <!-- Kolom Makanan -->
+                        <div class="menu-category-column">
+                            <div class="menu-category-title-section">
+                                <div class="menu-category-main-title">Makanan</div>
+                            </div>
+                            <div class="menu-category-dropdown-wrapper"
+                                style="position:relative; display:inline-block; width:100%;">
+                                <div class="menu-category-add-section" onclick="toggleCategory('makanan', this)">
+                                    <div class="menu-category-logo">🍔</div>
+                                    <div class="menu-category-add-label">+ Tambah Makanan</div>
+                                    <span class="menu-category-toggle">▼</span>
+                                </div>
+                                <div class="menu-dropdown-overlay" id="menu-makanan-items-list" style="display:none;">
+                                    <input type="text" class="menu-search" placeholder="Cari makanan..."
+                                        oninput="filterMenu('makanan', this.value)">
+                                    <div class="menu-items-list" id="menu-makanan-items-online">
+                                        <p style="color:#9ca3af; font-size:0.85rem;">Klik "+ Tambah Makanan" untuk
+                                            menampilkan daftar.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Kolom Minuman -->
+                        <div class="menu-category-column">
+                            <div class="menu-category-title-section">
+                                <div class="menu-category-main-title">Minuman</div>
+                            </div>
+                            <div class="menu-category-dropdown-wrapper"
+                                style="position:relative; display:inline-block; width:100%;">
+                                <div class="menu-category-add-section" onclick="toggleCategory('minuman', this)">
+                                    <div class="menu-category-logo">🥤</div>
+                                    <div class="menu-category-add-label">+ Tambah Minuman</div>
+                                    <span class="menu-category-toggle">▼</span>
+                                </div>
+                                <div class="menu-dropdown-overlay" id="menu-minuman-items-list" style="display:none;">
+                                    <input type="text" class="menu-search" placeholder="Cari minuman..."
+                                        oninput="filterMenu('minuman', this.value)">
+                                    <div class="menu-items-list" id="menu-minuman-items-online">
+                                        <p style="color:#9ca3af; font-size:0.85rem;">Klik "+ Tambah Minuman" untuk
+                                            menampilkan daftar.</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -133,21 +200,33 @@
                 </div>
             </div>
 
-            <div class="card">
-                <h3>Keranjang Pesanan</h3>
-                <div id="cart-items">
-                    <p style="color:#9ca3af; font-size:0.85rem;">Belum ada item dipilih.</p>
-                </div>
-                <div class="total-box">
-                    <span>Total</span>
-                    <span id="cart-total">Rp 0</span>
-                </div>
+                <div class="card">
+                    <h3>Keranjang Pesanan</h3>
+                    <div id="cart-items"><p style="color:#9ca3af; font-size:0.85rem;">Belum ada item dipilih.</p></div>
+                    <div class="total-box"><span>Total</span><span id="cart-total">Rp 0</span></div>
+
+                    <!-- Offline: input uang diterima & kembalian -->
+                    <div id="cart-offline-section" style="display:flex; flex-direction:column; gap:6px;">
                 <input type="text" inputmode="decimal" id="cash-paid" placeholder="Uang diterima (opsional, untuk hitung kembalian)"
-                    oninput="cleanRupiahInput(this); hitungKembalian()" onblur="formatRupiahInput(this); hitungKembalian()" />
-                <div id="change-display" style="font-size:0.9rem; color:#16a34a; font-weight:600; margin-bottom:10px;">
+                    onfocus="focusRupiahInput(this)" onclick="focusRupiahInput(this)" oninput="cleanRupiahInput(this); hitungKembalian()" onblur="formatRupiahInput(this); hitungKembalian()" />
+                        <div id="change-display" style="font-size:0.9rem; color:#16a34a; font-weight:600; margin-bottom:10px;"></div>
+                    </div>
+
+                    <!-- Online: total setelah potongan (admin isi manual, wajib) -->
+                    <div id="cart-online-section" style="display:none; flex-direction:column; gap:2px;">
+                        <div style="font-size:0.75rem; color:#6b7280;">Total Setelah Potongan <span style="color:#dc2626;">*</span></div>
+                        <input type="text" inputmode="decimal" id="online-total-setoran" placeholder="Masukkan total setelah potongan"
+                            onfocus="focusRupiahInput(this)" onclick="focusRupiahInput(this)" oninput="cleanRupiahInput(this); hitungDiskonOnline()" onblur="formatRupiahInput(this); hitungDiskonOnline()" />
+                        <div id="online-total-setoran-error" style="font-size:0.75rem; color:#dc2626; display:none;">Total setelah potongan wajib diisi</div>
+                        <div id="online-discount-info" style="display:flex; flex-direction:column; gap:0; font-size:0.7rem; color:#6b7280; margin-top:0; display:none;">
+                            <div>potongan :</div>
+                            <div id="online-discount-pct"></div>
+                            <div id="online-discount-amount" style="color:#dc2626;"></div>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" onclick="simpanTransaksi()">Simpan Transaksi</button>
                 </div>
-                <button class="btn-primary" onclick="simpanTransaksi()">Simpan Transaksi</button>
-            </div>
         </div>
 
         <!-- TAB 2: REKAP & EXPORT -->
@@ -155,8 +234,16 @@
             <div class="card">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                     <h3 style="margin:0;">Laporan Penjualan</h3>
-                    <input type="date" id="filter-date" style="width:auto; margin:0; padding:6px 10px;"
-                        onchange="renderLaporan()" />
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="date" id="filter-date" style="width:auto; margin:0; padding:6px 10px;"
+                            onchange="renderLaporan()" />
+                        <select id="filter-channel" style="width:auto; padding:6px 10px; border:1px solid #d1d5db; border-radius:6px;"
+                            onchange="renderLaporan()">
+                            <option value="all">Semua (Offline + Online)</option>
+                            <option value="Offline">Hanya Offline</option>
+                            <option value="Online">Hanya Online</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="summary-grid">
                     <div class="stat-box green">
@@ -187,7 +274,7 @@
                     <option value="Minuman">Minuman</option>
                 </select>
                 <div class="price-input-wrapper">
-                  <input type="text" inputmode="decimal" id="new-menu-price" placeholder="Harga Default (contoh: 15000)" oninput="cleanRupiahInput(this)" onblur="formatRupiahInput(this)" />
+                  <input type="text" inputmode="decimal" id="new-menu-price" placeholder="Harga Default (contoh: 15000)" onfocus="focusRupiahInput(this)" onclick="focusRupiahInput(this)" oninput="cleanRupiahInput(this)" onblur="formatRupiahInput(this)" />
                 </div>
                 <button class="btn-primary" onclick="tambahMenu()">+ Tambah Menu</button>
             </div>
@@ -220,6 +307,17 @@
                     default.</p>
             </div>
         </div>
+
+        <!-- TAB 6: APLIKASI DELIVERY -->
+        <div id="tab-aplikasi" class="tab-content">
+            <div class="card">
+                <h3>Daftar Aplikasi Delivery</h3>
+                <input type="text" id="new-delivery-app-name" placeholder="Nama Aplikasi (contoh: GoFood)" />
+                <input type="text" id="new-delivery-app-type" placeholder="Tipe (contoh: Makanan)" />
+                <button class="btn-primary" onclick="tambahDeliveryApp()">+ Simpan Aplikasi</button>
+                <div id="delivery-app-list" style="margin-top:12px;"></div>
+            </div>
+        </div>
     </div>
 
     <!-- Navigasi Bawah -->
@@ -227,15 +325,16 @@
         <button class="active" onclick="switchTab('kasir', this)"><span>🧾</span>Kasir</button>
         <button onclick="switchTab('rekap', this)"><span>📊</span>Rekap</button>
         <button onclick="switchTab('menu', this)"><span>🍔</span>Menu</button>
-        <button onclick="switchTab('pelanggan', this)"><span>👥</span>Pelanggan</button>
-        <button onclick="switchTab('harga', this)"><span>💰</span>Harga</button>
+        <button onclick="switchTab('pelanggan', this)" id="btn-pelanggan"><span>👥</span>Pelanggan</button>
+        <button onclick="switchTab('harga', this)" id="btn-harga"><span>💰</span>Harga</button>
+        <button onclick="switchTab('aplikasi', this)" id="btn-aplikasi"><span>📱</span>Aplikasi</button>
     </nav>
     <div id="edit-price-popup" class="popup-overlay" style="display:none;" onclick="closeEditPrice()">
             <div class="popup-box" onclick="event.stopPropagation()">
             <div class="popup-title">Edit Harga</div>
             <div id="edit-price-langganan-label" style="font-size:0.8rem; color:#6b7280; margin-bottom:8px;"></div>
             <div class="price-input-wrapper">
-              <input type="text" inputmode="decimal" id="edit-price-input" placeholder="Masukkan harga baru" autofocus onfocus="focusRupiahInput(this)" oninput="cleanRupiahInput(this)" onblur="formatRupiahInput(this)" />
+              <input type="text" inputmode="decimal" id="edit-price-input" placeholder="Masukkan harga baru" autofocus onfocus="focusRupiahInput(this)" onclick="focusRupiahInput(this)" oninput="cleanRupiahInput(this)" onblur="formatRupiahInput(this)" />
             </div>
             <div class="popup-actions">
                 <button onclick="closeEditPrice()">Batal</button>

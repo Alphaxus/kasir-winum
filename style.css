@@ -25,14 +25,44 @@ header small { opacity: 0.9; font-size: 0.8rem; }
 .desktop-channel-section { display: none; }
 
 @media (min-width: 768px) {
-  .mobile-menu-btn { display: none; }
-  .desktop-channel-section { display: block; }
+  .mobile-menu-btn { display: flex; }
+  .sidebar {
+    left: -280px;
+    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 150;
+    position: fixed;
+  }
+  .sidebar.open {
+    left: 0;
+  }
+  .container {
+    margin-left: 0;
+    transition: none;
+  }
 }
 
 /* Container */
 .container { max-width: 500px; margin: 0 auto; padding: 14px; }
 .tab-content { display: none; }
-.tab-content.active { display: block; }
+.tab-content.active { display: block; overflow: visible !important; }
+
+/* Dropdown pelanggan - override inline styles */
+#customer-dropdown-list {
+  position: absolute !important;
+  top: 100% !important;
+  left: 0 !important;
+  right: 0 !important;
+  background: #fff !important;
+  z-index: 99999 !important;
+  border: 1px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15) !important;
+  max-height: 240px !important;
+  overflow-y: auto !important;
+  margin-top: 6px !important;
+  min-width: 250px !important;
+  pointer-events: auto !important;
+}
 
 /* Kartu & Form */
 .card { background: white; border-radius: 12px; padding: 14px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
@@ -244,10 +274,12 @@ button { cursor: pointer; border: none; border-radius: 8px; font-weight: 600; tr
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-bottom: 1px solid #f3f4f6;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
+  pointer-events: auto;
+  background: #fff;
 }
 .customer-dropdown-item:last-child {
   border-bottom: none;
@@ -540,3 +572,31 @@ nav { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-t
 nav button { background: none; color: #6b7280; font-size: 0.75rem; display: flex; flex-direction: column; align-items: center; gap: 3px; }
 nav button.active { color: #ea580c; }
 nav span { font-size: 1.2rem; }
+
+/* Online Cashier View Styles */
+#online-customer-id {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+#online-customer-name {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+/* Delivery App Tab Styles */
+#new-delivery-app-name, #new-delivery-app-type {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+/* Delivery App badge in laporan */
