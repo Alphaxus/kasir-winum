@@ -34,121 +34,70 @@ if (filterDateEl) filterDateEl.value = todayStr;
 
 const rupiah = (n) => "Rp " + Number(n).toLocaleString("id-ID");
 
-// Auto-format input harga: 13 -> 13.000, 13.5 -> 13.500
-window.formatRupiahInput = function(inputEl) {
-  // Jika kosong dan ada nilai asli yang disimpan, kembalikan nilai asli
-  if (!inputEl.value.trim() && inputEl.dataset.originalValue) {
-    inputEl.value = inputEl.dataset.originalValue;
-    delete inputEl.dataset.originalValue;
-    return;
-  }
-
-  let val = inputEl.value.replace(/[^0-9.]/g, '');
-  if (!val) {
-    inputEl.value = '';
-    return;
-  }
-
-  const hasDot = val.includes('.');
-
-  if (hasDot) {
-    const parts = val.split('.');
-    const intPart = parts[0].replace(/\D/g, '');
-    const decPart = (parts[1] || '').replace(/\D/g, '').slice(0, 3);
-    const paddedDec = decPart.padEnd(3, '0');
-    const formattedInt = intPart ? intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '0';
-    inputEl.value = formattedInt + '.' + paddedDec;
-  } else {
-    const formattedInt = val.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    inputEl.value = formattedInt + '.000';
-  }
+// Parse input harga mentah ke angka murni (tanpa format, tanpa kalikan)
+window.parseRupiahInput = function(str) {
+  if (!str) return 0;
+  const val = String(str).replace(/[^0-9.]/g, '');
+  if (!val || val === '.') return 0;
+  const num = Number(val);
+  return isFinite(num) ? num : 0;
 };
 
-// Simpan nilai asli dan sisihkan caret tepat setelah angka sebelum titik desimal (.000) saat difokus
+// Kali 1000 pada field harga
+window.kaliSeribu = function(inputEl) {
+  const val = inputEl.value.replace(/[^0-9.]/g, '');
+  if (!val || val === '.') return;
+  const num = Number(val);
+  if (!isFinite(num)) return;
+  inputEl.value = (num * 1000).toString();
+  inputEl.dispatchEvent(new Event('input', { bubbles: true }));
+  inputEl.focus();
+};
+
+// Fokus field harga (polis): taruh kursor di akhir
 window.focusRupiahInput = function(inputEl) {
-  if (!inputEl.dataset.originalValue) {
-    inputEl.dataset.originalValue = inputEl.value;
-  }
+  if (!inputEl.dataset.originalValue) inputEl.dataset.originalValue = inputEl.value;
   setTimeout(() => {
-    const dotIndex = inputEl.value.indexOf('.');
-    if (dotIndex === -1) {
-      inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
-      return;
-    }
-    let lastNonZero = dotIndex;
-    for (let i = dotIndex + 1; i < inputEl.value.length; i++) {
-      if (inputEl.value[i] !== '0') lastNonZero = i;
-    }
-    const pos = lastNonZero > dotIndex ? lastNonZero + 1 : dotIndex;
-    inputEl.setSelectionRange(pos, pos);
+    inputEl.setSelectionRange(inputEl.value.length, inputEl.value.length);
   }, 50);
 };
 
-// Bersihkan & format input harga secara real-time saat mengetik
-window.cleanRupiahInput = function(inputEl) {
+// Blur field harga (polis): biarkan apa adanya
+window.blurRupiahInput = function(inputEl) {
+  // Tidak ada pemformatan; field tetap apa adanya
+};
+
+
+// Hapus angka sambil melewati titik pemisah (.) saat menekan Backspace/Delete
+window.handleRupiahDelete = function(inputEl, e) {
+  if (e.key !== 'Backspace' && e.key !== 'Delete') return;
+  e.preventDefault();
+
+  const val = inputEl.value;
   const start = inputEl.selectionStart;
   const end = inputEl.selectionEnd;
-  const originalValue = inputEl.value;
+  let newVal, newPos;
 
-  // Hapus semua karakter kecuali angka dan titik
-  let val = originalValue.replace(/[^0-9.]/g, '');
-
-  // Jika kosong, hanya titik, atau hanya nol (tanpa angka berarti), kosongkan field sepenuhnya
-  const digitsOnly = val.replace(/[.0]/g, '');
-  if (!val || !digitsOnly) {
-    inputEl.value = '';
-    inputEl.setSelectionRange(0, 0);
-    return;
-  }
-
-  // Jika ada lebih dari satu titik, hanya simpan titik pertama
-  const dotCount = (val.match(/\./g) || []).length;
-  if (dotCount > 1) {
-    const firstDot = val.indexOf('.');
-    val = val.substring(0, firstDot + 1) + val.substring(firstDot + 1).replace(/\./g, '');
-  }
-
-  // Jika tidak ada titik, tambahkan .000
-  if (!val.includes('.')) {
-    val = val + '.000';
+  if (start !== end) {
+    newVal = val.slice(0, start) + val.slice(end);
+    newPos = start;
+  } else if (e.key === 'Backspace') {
+    let i = start - 1;
+    while (i >= 0 && val[i] === '.') i--;
+    if (i < 0) return;
+    newVal = val.slice(0, i) + val.slice(i + 1);
+    newPos = i;
   } else {
-    // Potong desimal maksimal 3 digit
-    const parts = val.split('.');
-    parts[1] = parts[1].replace(/\D/g, '').slice(0, 3);
-    val = parts.join('.');
+    let i = end;
+    while (i < val.length && val[i] === '.') i++;
+    if (i >= val.length) return;
+    newVal = val.slice(0, i) + val.slice(i + 1);
+    newPos = i;
   }
 
-  inputEl.value = val;
-
-  // Kembalikan kursor ke posisi yang sesuai (hindari lompat ke akhir)
-  inputEl.setSelectionRange(start, end);
-};
-
-// Tampilkan format lengkap saat meninggalkan kolom (blur)
-window.formatRupiahInput = function(inputEl) {
-  let val = inputEl.value.replace(/[^0-9.]/g, '');
-  const digitsOnly = val.replace(/[.0]/g, '');
-  if (!val || !digitsOnly) {
-    inputEl.value = '';
-    return;
-  }
-
-  const dotIndex = val.lastIndexOf('.');
-  if (dotIndex > -1) {
-    const intPart = val.substring(0, dotIndex).replace(/\D/g, '');
-    const decPart = val.substring(dotIndex + 1).replace(/\D/g, '').slice(0, 3).padEnd(3, '0');
-    const formattedInt = intPart ? intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : '0';
-    inputEl.value = formattedInt + '.' + decPart;
-  } else {
-    const formattedInt = val.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    inputEl.value = formattedInt + '.000';
-  }
-};
-
-// Parse string berformat titik kembali ke angka murni
-window.parseRupiahInput = function(str) {
-  if (!str) return 0;
-  return Number(str.replace(/\./g, ''));
+  inputEl.value = newVal;
+  inputEl.setSelectionRange(newPos, newPos);
+  inputEl.dispatchEvent(new Event('input', { bubbles: true }));
 };
 
 // Fungsi Buka/Tutup Sidebar HP
@@ -1173,11 +1122,9 @@ if (window.visualViewport) {
 }
 window.closeEditPrice = () => {
   const input = document.getElementById('edit-price-input');
-  // Trigger blur agar formatRupiahInput bisa memulihkan nilai asli via onblur
-  if (input) input.blur();
-  // Pastikan nilai asli dikembalikan jika masih ada dataset
-  if (input && input.dataset.originalValue) {
-    input.value = input.dataset.originalValue;
+  if (input) {
+    input.blur();
+    input.value = '';
     delete input.dataset.originalValue;
   }
 

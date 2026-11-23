@@ -207,16 +207,22 @@
 
                     <!-- Offline: input uang diterima & kembalian -->
                     <div id="cart-offline-section" style="display:flex; flex-direction:column; gap:6px;">
-                <input type="text" inputmode="decimal" id="cash-paid" placeholder="Uang diterima (opsional, untuk hitung kembalian)"
-                    onfocus="focusRupiahInput(this)" onclick="focusRupiahInput(this)" oninput="cleanRupiahInput(this); hitungKembalian()" onblur="formatRupiahInput(this); hitungKembalian()" />
+<div class="price-row">
+<input type="text" inputmode="decimal" id="cash-paid" placeholder="Uang diterima (contoh: 12 = 12.000)"
+    onfocus="focusRupiahInput(this)" onclick="focusRupiahInput(this)" oninput="hitungKembalian()" onblur="hitungKembalian()" />
+<button type="button" onclick="kaliSeribu(document.getElementById('cash-paid'))">×1000</button>
+</div>
                         <div id="change-display" style="font-size:0.9rem; color:#16a34a; font-weight:600; margin-bottom:10px;"></div>
                     </div>
 
                     <!-- Online: total setelah potongan (admin isi manual, wajib) -->
                     <div id="cart-online-section" style="display:none; flex-direction:column; gap:2px;">
                         <div style="font-size:0.75rem; color:#6b7280;">Total Setelah Potongan <span style="color:#dc2626;">*</span></div>
-                        <input type="text" inputmode="decimal" id="online-total-setoran" placeholder="Masukkan total setelah potongan"
-                            onfocus="focusRupiahInput(this)" onclick="focusRupiahInput(this)" oninput="cleanRupiahInput(this); hitungDiskonOnline()" onblur="formatRupiahInput(this); hitungDiskonOnline()" />
+<div class="price-row">
+<input type="text" inputmode="decimal" id="online-total-setoran" placeholder="Masukkan total setelah potongan (contoh: 15 = 15.000)"
+    onfocus="focusRupiahInput(this)" onclick="focusRupiahInput(this)" oninput="hitungDiskonOnline()" onblur="hitungDiskonOnline()" />
+<button type="button" onclick="kaliSeribu(document.getElementById('online-total-setoran'))">×1000</button>
+</div>
                         <div id="online-total-setoran-error" style="font-size:0.75rem; color:#dc2626; display:none;">Total setelah potongan wajib diisi</div>
                         <div id="online-discount-info" style="display:flex; flex-direction:column; gap:0; font-size:0.7rem; color:#6b7280; margin-top:0; display:none;">
                             <div>potongan :</div>
@@ -273,9 +279,10 @@
                     <option value="Makanan">Makanan</option>
                     <option value="Minuman">Minuman</option>
                 </select>
-                <div class="price-input-wrapper">
-                  <input type="text" inputmode="decimal" id="new-menu-price" placeholder="Harga Default (contoh: 15000)" onfocus="focusRupiahInput(this)" onclick="focusRupiahInput(this)" oninput="cleanRupiahInput(this)" onblur="formatRupiahInput(this)" />
-                </div>
+                <div class="price-row">
+                  <input type="text" inputmode="decimal" id="new-menu-price" placeholder="Harga Default (contoh: 12 = 12.000)" onfocus="focusRupiahInput(this)" onclick="focusRupiahInput(this)" />
+<button type="button" onclick="kaliSeribu(document.getElementById('new-menu-price'))">×1000</button>
+</div>
                 <button class="btn-primary" onclick="tambahMenu()">+ Tambah Menu</button>
             </div>
 
@@ -333,9 +340,10 @@
             <div class="popup-box" onclick="event.stopPropagation()">
             <div class="popup-title">Edit Harga</div>
             <div id="edit-price-langganan-label" style="font-size:0.8rem; color:#6b7280; margin-bottom:8px;"></div>
-            <div class="price-input-wrapper">
-              <input type="text" inputmode="decimal" id="edit-price-input" placeholder="Masukkan harga baru" autofocus onfocus="focusRupiahInput(this)" onclick="focusRupiahInput(this)" oninput="cleanRupiahInput(this)" onblur="formatRupiahInput(this)" />
-            </div>
+            <div class="price-row">
+              <input type="text" inputmode="decimal" id="edit-price-input" placeholder="Masukkan harga baru (contoh: 12 = 12.000)" autofocus onfocus="focusRupiahInput(this)" onclick="focusRupiahInput(this)" />
+<button type="button" onclick="kaliSeribu(document.getElementById('edit-price-input'))">×1000</button>
+</div>
             <div class="popup-actions">
                 <button onclick="closeEditPrice()">Batal</button>
                 <button class="btn-simpan" onclick="simpanEditHarga()">Simpan</button>
