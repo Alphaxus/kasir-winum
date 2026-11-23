@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, getDocs, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy, getDocs, where, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyACq4Vs5VgKrH24mqOXY9G5R3PUtReM2qw",
@@ -23,6 +23,7 @@ let selectedChannel = "Offline";
 let customers = [];
 let customerPrices = [];
 let deliveryApps = [];
+let menuCategories = [];
 let selectedCustomerId = null;
 let selectedCustomerName = null;
 let nextCustomerNumber = 1;
@@ -157,6 +158,15 @@ onSnapshot(query(collection(db, "deliveryApps"), orderBy("name")), (snapshot) =>
   console.error("Gagal memuat delivery app:", err);
 });
 
+// 6. Dengarkan perubahan Kategori Menu secara Real-time
+onSnapshot(query(collection(db, "menuCategories"), orderBy("name")), (snapshot) => {
+  menuCategories = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  renderQuickMenuLists();
+  renderKategoriTable();
+}, (err) => {
+  console.error("Gagal memuat kategori menu:", err);
+});
+
 // 6. Hitung nomor pelanggan berikutnya untuk generate ID WMxx
 onSnapshot(query(collection(db, "customers")), (snapshot) => {
   let maxNum = 0;
@@ -180,7 +190,17 @@ window.switchTab = (tabName, btn) => {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(el => el.classList.remove('active'));
   document.getElementById('tab-' + tabName).classList.add('active');
-  btn.classList.add('active');
+  if (btn) btn.classList.add('active');
+
+  // Sync tombol sidebar Kategori Menu (serupa Offline/Online)
+  document.querySelectorAll('.channel-btn').forEach(b => {
+    b.classList.remove('active');
+  });
+  if (tabName === 'kategori') {
+    document.querySelectorAll('.channel-btn').forEach(b => {
+      if (b.textContent.includes('Kategori Menu')) b.classList.add('active');
+    });
+  }
   // Tutup dropdown pelanggan saat pindah dari tab Kasir
   const customerListEl = document.getElementById('customer-dropdown-list');
   if (customerListEl) customerListEl.style.display = 'none';
@@ -488,7 +508,146 @@ function renderMenus() {
       </div>
     `;
   }).join('');
+  renderQuickMenuLists();
 }
+
+// Render dropdown kategori di halaman Menu (hanya jenis custom yang ditambahkan admin)
+const customCategories = new Map();
+
+window.renderQuickMenuLists = function() {
+  const newCatSel = document.getElementById('new-menu-category');
+
+  const allCats = [...new Set([...menuCategories.map(c => c.name), ...Array.from(customCategories.keys())])];
+  const catOpts = allCats.map(c => `<option value="${c}">${c}</option>`).join('');
+  if (newCatSel) newCatSel.innerHTML = catOpts || '<option value="">-- Belum ada jenis --</option>';
+};
+
+// Tabel daftar kategori di halaman Kategori (kelompokkan per Makanan/Minuman)
+window.renderKategoriTable = function() {
+  const makananBody = document.getElementById('kategori-table-body-makanan');
+  const minumanBody = document.getElementById('kategori-table-body-minuman');
+  const emptyMsg = document.getElementById('kategori-empty');
+
+  const allCats = [...new Set([...menuCategories.map(c => c.name), ...Array.from(customCategories.keys())])];
+
+  if (makananBody) makananBody.innerHTML = '';
+  if (minumanBody) minumanBody.innerHTML = '';
+
+  if (allCats.length === 0) {
+    if (emptyMsg) emptyMsg.style.display = 'block';
+    return;
+  }
+  if (emptyMsg) emptyMsg.style.display = 'none';
+
+  allCats.forEach(cat => {
+    const catData = menuCategories.find(c => c.name === cat);
+    const grup = catData ? catData.group : (customCategories.get(cat) || 'Makanan');
+    const docId = catData ? catData.id : null;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="padding:8px; border-bottom:1px solid #e5e7eb;">${cat}</td>
+      <td style="padding:8px; border-bottom:1px solid #e5e7eb; color:#6b7280;">${grup}</td>
+      <td style="padding:8px; border-bottom:1px solid #e5e7eb; text-align:center;">
+        <button onclick="editKategori('${cat}', '${grup}')" style="padding:4px 8px; background:#f59e0b; border:none; border-radius:4px; color:#fff; font-size:0.75rem; cursor:pointer; margin-right:4px;">Edit</button>
+        <button onclick="hapusKategori('${cat}', ${docId ? `'${docId}'` : 'null'})" style="padding:4px 8px; background:#fee2e2; border:none; border-radius:4px; color:#dc2626; font-size:0.75rem; cursor:pointer;">Hapus</button>
+      </td>
+    `;
+    if (grup === 'Makanan' && makananBody) makananBody.appendChild(tr);
+    if (grup === 'Minuman' && minumanBody) minumanBody.appendChild(tr);
+  });
+  filterKategori(null, 'Semua');
+};
+
+// Edit nama kategori
+window.editKategori = async function(namaLama, grupLama) {
+  const namaBaru = prompt("Edit nama kategori:", namaLama);
+  if (namaBaru === null || namaBaru.trim() === '') return;
+  namaBaru = namaBaru.trim();
+  if (namaBaru === namaLama) return;
+
+  // Cari di Firebase
+  const catData = menuCategories.find(c => c.name === namaLama);
+  if (catData && catData.id) {
+    await updateDoc(doc(db, "menuCategories", catData.id), { name: namaBaru });
+  }
+  // Update customCategories Map jika ada
+  if (customCategories.has(namaLama)) {
+    customCategories.delete(namaLama);
+    customCategories.set(namaBaru, grupLama);
+  }
+  renderKategoriTable();
+  renderQuickMenuLists();
+};
+
+// Hapus kategori
+window.hapusKategori = async function(nama, docId) {
+  if (!confirm("Hapus kategori '" + nama + "'?")) return;
+  if (docId && docId !== 'null') {
+    await deleteDoc(doc(db, "menuCategories", docId));
+  }
+  if (customCategories.has(nama)) {
+    customCategories.delete(nama);
+  }
+  renderKategoriTable();
+  renderQuickMenuLists();
+};
+
+// Filter tampilan kategori per grup
+window.filterKategori = function(e, grup) {
+  if (e) e.preventDefault();
+  const makananSection = document.getElementById('kategori-makanan-section');
+  const minumanSection = document.getElementById('kategori-minuman-section');
+  const btnMakanan = document.getElementById('btn-filter-makanan');
+  const btnMinuman = document.getElementById('btn-filter-minuman');
+  const btnSemua = document.getElementById('btn-filter-semua');
+
+  if (!makananSection || !minumanSection) return;
+
+  // Reset button styles
+  [btnMakanan, btnMinuman, btnSemua].forEach(b => {
+    b.style.background = '#f3f4f6';
+    b.style.color = '#ea580c';
+    b.style.borderColor = '#ea580c';
+  });
+
+  if (grup === 'Semua') {
+    makananSection.style.display = 'block';
+    minumanSection.style.display = 'block';
+    btnSemua.style.background = '#ea580c';
+    btnSemua.style.color = '#fff';
+  } else if (grup === 'Makanan') {
+    makananSection.style.display = 'block';
+    minumanSection.style.display = 'none';
+    btnMakanan.style.background = '#ea580c';
+    btnMakanan.style.color = '#fff';
+  } else if (grup === 'Minuman') {
+    makananSection.style.display = 'none';
+    minumanSection.style.display = 'block';
+    btnMinuman.style.background = '#ea580c';
+    btnMinuman.style.color = '#fff';
+  }
+};
+
+// Buka halaman Kategori Menu (tab terpisah)
+window.openQuickMenuForm = function() {
+  switchTab('kategori', document.getElementById('btn-kategori'));
+};
+
+// Simpan kategori menu baru ke Firebase (di halaman Kategori terpisah)
+window.simpanKategoriMenu = async function() {
+  const namaInput = document.getElementById('kategori-nama');
+  const grupInput = document.getElementById('kategori-grup');
+  const nama = namaInput ? namaInput.value.trim() : '';
+  const grup = grupInput ? grupInput.value : 'Makanan';
+  if (!nama) return alert("Isi nama jenis menu!");
+  if (customCategories.has(nama)) return alert("Jenis '" + nama + "' sudah ada!");
+  await addDoc(collection(db, "menuCategories"), { name: nama, group: grup, createdAt: new Date().getTime() });
+  customCategories.set(nama, grup);
+  alert("Kategori '" + nama + "' tersimpan!");
+  namaInput.value = '';
+  renderQuickMenuLists();
+  renderKategoriTable();
+};
 
 // Keranjang Belanja
 window.addToCart = (id) => {
@@ -1188,17 +1347,19 @@ window.simpanEditHarga = async () => {
   }
 
   renderCart();
+  hitungDiskonOnline();
   closeEditPrice();
 };
 document.addEventListener('keydown', (e) => {
-  const popup = document.getElementById('edit-price-popup');
-  if (!popup || popup.style.display === 'none') return;
+  const pricePopup = document.getElementById('edit-price-popup');
+  const anyOpen = pricePopup && pricePopup.style.display !== 'none';
+  if (!anyOpen) return;
 
   if (e.key === 'Escape') {
     closeEditPrice();
   } else if (e.key === 'Enter') {
     e.preventDefault();
-    simpanEditHarga();
+    if (pricePopup && pricePopup.style.display !== 'none') simpanEditHarga();
   }
 });
 

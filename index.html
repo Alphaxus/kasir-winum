@@ -23,6 +23,7 @@
         <div class="channel-group vertical">
             <button class="channel-btn active" onclick="setChannelView('Offline', this)">🏪 Offline</button>
             <button class="channel-btn" onclick="setChannelView('Online', this)">🟢 Online</button>
+            <button class="channel-btn" onclick="openQuickMenuForm()">🏷️ Kategori Menu</button>
         </div>
     </div>
 
@@ -275,10 +276,9 @@
             <div class="card">
                 <h3>Tambah Menu Baru</h3>
                 <input type="text" id="new-menu-name" placeholder="Nama Makanan / Minuman" />
-                <select id="new-menu-category">
-                    <option value="Makanan">Makanan</option>
-                    <option value="Minuman">Minuman</option>
-                </select>
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+                    <select id="new-menu-category" style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;"></select>
+                </div>
                 <div class="price-row">
                   <input type="text" inputmode="decimal" id="new-menu-price" placeholder="Harga Default (contoh: 12 = 12.000)" onfocus="focusRupiahInput(this)" onclick="focusRupiahInput(this)" />
 <button type="button" onclick="kaliSeribu(document.getElementById('new-menu-price'))">×1000</button>
@@ -325,6 +325,55 @@
                 <div id="delivery-app-list" style="margin-top:12px;"></div>
             </div>
         </div>
+
+        <!-- TAB 7: KATEGORI MENU -->
+        <div id="tab-kategori" class="tab-content">
+            <div class="card">
+                <h3>Tambah Kategori Menu</h3>
+                <input type="text" id="kategori-nama" placeholder="Nama jenis baru (contoh: freshdrink)" />
+                <div style="margin-top:10px;">
+                    <div style="font-size:0.75rem;color:#6b7280;margin-bottom:4px;">Masukkan ke Grup</div>
+                    <select id="kategori-grup" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;">
+                        <option value="Makanan">Makanan</option>
+                        <option value="Minuman">Minuman</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="simpanKategoriMenu()">Simpan</button>
+            </div>
+            <div style="margin-top:16px;">
+                <h4 style="font-size:0.85rem; color:#374151; margin-bottom:8px;">Daftar Kategori Tersimpan</h4>
+                <div style="display:flex; gap:8px; margin-bottom:10px;">
+                    <button type="button" onclick="filterKategori(event, 'Makanan')" id="btn-filter-makanan" style="flex:1;padding:8px;background:#f3f4f6;border:2px solid #ea580c;border-radius:6px;color:#ea580c;font-weight:700;cursor:pointer;">Makanan</button>
+                    <button type="button" onclick="filterKategori(event, 'Minuman')" id="btn-filter-minuman" style="flex:1;padding:8px;background:#f3f4f6;border:2px solid #ea580c;border-radius:6px;color:#ea580c;font-weight:700;cursor:pointer;">Minuman</button>
+                    <button type="button" onclick="filterKategori(event, 'Semua')" id="btn-filter-semua" style="flex:1;padding:8px;background:#ea580c;border:2px solid #ea580c;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;">Semua</button>
+                </div>
+                <div id="kategori-makanan-section" style="margin-bottom:12px;">
+                    <h5 style="font-size:0.8rem;color:#6b7280;margin-bottom:6px;">Makanan</h5>
+                    <table id="kategori-table-makanan" style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                        <thead>
+                            <tr style="text-align:left;">
+                                <th style="padding:8px; border-bottom:2px solid #e5e7eb; color:#6b7280;">Nama Kategori</th>
+                                <th style="padding:8px; border-bottom:2px solid #e5e7eb; color:#6b7280; width:100px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kategori-table-body-makanan"></tbody>
+                    </table>
+                </div>
+                <div id="kategori-minuman-section" style="margin-bottom:12px;">
+                    <h5 style="font-size:0.8rem;color:#6b7280;margin-bottom:6px;">Minuman</h5>
+                    <table id="kategori-table-minuman" style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                        <thead>
+                            <tr style="text-align:left;">
+                                <th style="padding:8px; border-bottom:2px solid #e5e7eb; color:#6b7280;">Nama Kategori</th>
+                                <th style="padding:8px; border-bottom:2px solid #e5e7eb; color:#6b7280; width:100px;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kategori-table-body-minuman"></tbody>
+                    </table>
+                </div>
+                <p id="kategori-empty" style="color:#9ca3af; font-size:0.8rem; margin-top:8px; display:none; text-align:center;">Belum ada kategori tersimpan.</p>
+            </div>
+        </div>
     </div>
 
     <!-- Navigasi Bawah -->
@@ -334,9 +383,10 @@
         <button onclick="switchTab('menu', this)"><span>🍔</span>Menu</button>
         <button onclick="switchTab('pelanggan', this)" id="btn-pelanggan"><span>👥</span>Pelanggan</button>
         <button onclick="switchTab('harga', this)" id="btn-harga"><span>💰</span>Harga</button>
-        <button onclick="switchTab('aplikasi', this)" id="btn-aplikasi"><span>📱</span>Aplikasi</button>
-    </nav>
-    <div id="edit-price-popup" class="popup-overlay" style="display:none;" onclick="closeEditPrice()">
+    <button onclick="switchTab('aplikasi', this)" id="btn-aplikasi"><span>📱</span>Aplikasi</button>
+</nav>
+
+<div id="edit-price-popup" class="popup-overlay" style="display:none;" onclick="closeEditPrice()">
             <div class="popup-box" onclick="event.stopPropagation()">
             <div class="popup-title">Edit Harga</div>
             <div id="edit-price-langganan-label" style="font-size:0.8rem; color:#6b7280; margin-bottom:8px;"></div>
