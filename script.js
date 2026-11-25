@@ -27,6 +27,8 @@ let menuCategories = [];
 let selectedCustomerId = null;
 let selectedCustomerName = null;
 let nextCustomerNumber = 1;
+let discountItems = []; // item target diskon (tombol mata 👁)
+let discountRules = []; // aturan diskon: { triggerMenuId, triggerMenuName, targetMenuIds[], discountAmount }
 
 // Set default filter tanggal ke hari ini
 const todayStr = new Date().toLocaleDateString('en-CA');
@@ -165,6 +167,13 @@ onSnapshot(query(collection(db, "menuCategories"), orderBy("name")), (snapshot) 
   renderKategoriTable();
 }, (err) => {
   console.error("Gagal memuat kategori menu:", err);
+});
+
+// 7. Dengarkan perubahan Aturan Diskon secara Real-time
+onSnapshot(query(collection(db, "discountRules"), orderBy("createdAt", "desc")), (snapshot) => {
+  discountRules = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+}, (err) => {
+  console.error("Gagal memuat aturan diskon:", err);
 });
 
 // 6. Hitung nomor pelanggan berikutnya untuk generate ID WMxx
@@ -321,10 +330,30 @@ window.tambahMenu = async () => {
   const price = window.parseRupiahInput(document.getElementById('new-menu-price').value);
   if (!name || price <= 0) return alert("Isi nama menu dan harga dengan benar!");
 
-  await addDoc(collection(db, "menus"), { name, category, price });
+  const categories = category ? ["Makanan", category] : ["Makanan"];
+
+  const docRef = await addDoc(collection(db, "menus"), { name, category: categories, price });
+  const newMenuId = docRef.id;
+
+  // Simpan aturan diskon jika ada item target dan nominal diskon
+  const diskonAmount = window.parseRupiahInput(document.getElementById('diskon-amount')?.value || '0');
+  if (discountItems.length > 0 && diskonAmount > 0) {
+    await addDoc(collection(db, "discountRules"), {
+      triggerMenuId: newMenuId,
+      triggerMenuName: name,
+      targetMenuIds: discountItems.map(d => d.id),
+      discountAmount: diskonAmount,
+      createdAt: new Date().getTime()
+    });
+  }
+
   document.getElementById('new-menu-name').value = "";
   document.getElementById('new-menu-price').value = "";
-  alert("Menu berhasil ditambahkan!");
+  const diskonAmountInput = document.getElementById('diskon-amount');
+  if (diskonAmountInput) diskonAmountInput.value = "";
+  discountItems = [];
+  renderDiskonBar();
+  alert("Menu dan aturan diskon berhasil disimpan!");
 };
 
 // Hapus Menu
@@ -398,9 +427,10 @@ window.filterMenu = (category, searchText) => {
   );
   const term = searchText.toLowerCase();
   const filtered = menus.filter(m => {
-    const cat = (m.category || 'Makanan').toLowerCase();
-    if (category === 'makanan' && cat !== 'makanan') return false;
-    if (category === 'minuman' && cat !== 'minuman') return false;
+    const cats = Array.isArray(m.category) ? m.category : [(m.category || 'Makanan')];
+    const cat = cats.map(c => c.toLowerCase());
+    if (category === 'makanan' && !cat.includes('makanan')) return false;
+    if (category === 'minuman' && !cat.includes('minuman')) return false;
     return m.name.toLowerCase().includes(term);
   });
 
@@ -450,8 +480,14 @@ function renderMenus() {
   const manageEl = document.getElementById('menu-list-manage');
   if (!kasirMakananItemsEl || !kasirMinumanItemsEl || !manageEl) return;
 
-  const makanan = menus.filter(m => (m.category || 'Makanan') === 'Makanan');
-  const minuman = menus.filter(m => m.category === 'Minuman');
+  const makanan = menus.filter(m => {
+    const cats = Array.isArray(m.category) ? m.category : [(m.category || 'Makanan')];
+    return cats.includes('Makanan');
+  });
+  const minuman = menus.filter(m => {
+    const cats = Array.isArray(m.category) ? m.category : [(m.category || 'Minuman')];
+    return cats.includes('Minuman');
+  });
 
   // Helper: dapatkan harga tampilan sesuai pelanggan yang dipilih
   const getDisplayPrice = (m) => {
@@ -503,8 +539,11 @@ function renderMenus() {
   manageEl.innerHTML = menus.map(m => {
     return `
       <div class="cart-row">
-        <div><b>${m.name}</b> <span style="color:#6b7280;">(${m.category || 'Makanan'})</span><br><small style="color:#6b7280">${rupiah(m.price)}</small></div>
-        <button class="btn-danger" onclick="hapusMenu('${m.id}')">Hapus</button>
+        <div><b>${m.name}</b> <span style="color:#6b7280;">(${Array.isArray(m.category) ? m.category.join(', ') : (m.category || 'Makanan')})</span><br><small style="color:#6b7280">${rupiah(m.price)}</small></div>
+        <div style="display:flex; gap:4px;">
+          <button onclick="editMenu('${m.id}')" style="padding:4px 8px; background:#f59e0b; border:none; border-radius:4px; color:#fff; font-size:0.75rem; cursor:pointer;">Edit</button>
+          <button onclick="hapusMenu('${m.id}')" style="padding:4px 8px; background:#dc2626; border:none; border-radius:4px; color:#fff; font-size:0.75rem; cursor:pointer;">Hapus</button>
+        </div>
       </div>
     `;
   }).join('');
@@ -522,61 +561,99 @@ window.renderQuickMenuLists = function() {
   if (newCatSel) newCatSel.innerHTML = catOpts || '<option value="">-- Belum ada jenis --</option>';
 };
 
-// Tabel daftar kategori di halaman Kategori (kelompokkan per Makanan/Minuman)
+// Tabel daftar kategori di halaman Kategori
 window.renderKategoriTable = function() {
-  const makananBody = document.getElementById('kategori-table-body-makanan');
-  const minumanBody = document.getElementById('kategori-table-body-minuman');
+  const tbody = document.getElementById('kategori-table-body');
   const emptyMsg = document.getElementById('kategori-empty');
-
   const allCats = [...new Set([...menuCategories.map(c => c.name), ...Array.from(customCategories.keys())])];
-
-  if (makananBody) makananBody.innerHTML = '';
-  if (minumanBody) minumanBody.innerHTML = '';
-
-  if (allCats.length === 0) {
-    if (emptyMsg) emptyMsg.style.display = 'block';
-    return;
+  if (tbody) {
+    tbody.innerHTML = '';
+    if (allCats.length === 0) {
+      if (emptyMsg) emptyMsg.style.display = 'block';
+    } else {
+      if (emptyMsg) emptyMsg.style.display = 'none';
+      allCats.forEach(cat => {
+        const catData = menuCategories.find(c => c.name === cat);
+        const grup = catData ? catData.group : (customCategories.get(cat) || 'Makanan');
+        const docId = catData ? catData.id : null;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="padding:8px; border-bottom:1px solid #e5e7eb;">${cat}</td>
+          <td style="padding:8px; border-bottom:1px solid #e5e7eb; color:#6b7280;">${grup}</td>
+          <td style="padding:8px; border-bottom:1px solid #e5e7eb; text-align:center;">
+            <button onclick="editKategori('${cat}', '${grup}', ${docId ? `'${docId}'` : 'null'})" style="padding:4px 8px; background:#f59e0b; border:none; border-radius:4px; color:#fff; font-size:0.75rem; cursor:pointer; margin-right:4px;">Edit</button>
+            <button onclick="hapusKategori('${cat}', ${docId ? `'${docId}'` : 'null'})" style="padding:4px 8px; background:#fee2e2; border:none; border-radius:4px; color:#dc2626; font-size:0.75rem; cursor:pointer;">Hapus</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
   }
-  if (emptyMsg) emptyMsg.style.display = 'none';
-
-  allCats.forEach(cat => {
-    const catData = menuCategories.find(c => c.name === cat);
-    const grup = catData ? catData.group : (customCategories.get(cat) || 'Makanan');
-    const docId = catData ? catData.id : null;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td style="padding:8px; border-bottom:1px solid #e5e7eb;">${cat}</td>
-      <td style="padding:8px; border-bottom:1px solid #e5e7eb; color:#6b7280;">${grup}</td>
-      <td style="padding:8px; border-bottom:1px solid #e5e7eb; text-align:center;">
-        <button onclick="editKategori('${cat}', '${grup}')" style="padding:4px 8px; background:#f59e0b; border:none; border-radius:4px; color:#fff; font-size:0.75rem; cursor:pointer; margin-right:4px;">Edit</button>
-        <button onclick="hapusKategori('${cat}', ${docId ? `'${docId}'` : 'null'})" style="padding:4px 8px; background:#fee2e2; border:none; border-radius:4px; color:#dc2626; font-size:0.75rem; cursor:pointer;">Hapus</button>
-      </td>
-    `;
-    if (grup === 'Makanan' && makananBody) makananBody.appendChild(tr);
-    if (grup === 'Minuman' && minumanBody) minumanBody.appendChild(tr);
-  });
-  filterKategori(null, 'Semua');
 };
 
-// Edit nama kategori
-window.editKategori = async function(namaLama, grupLama) {
-  const namaBaru = prompt("Edit nama kategori:", namaLama);
-  if (namaBaru === null || namaBaru.trim() === '') return;
-  namaBaru = namaBaru.trim();
-  if (namaBaru === namaLama) return;
+// Simpan kategori menu baru (dari form utama)
+window.simpanKategoriMenu = async function() {
+  const namaInput = document.getElementById('kategori-nama');
+  const grupInput = document.getElementById('kategori-grup');
+  const nama = namaInput ? namaInput.value.trim() : '';
+  const grup = grupInput ? grupInput.value : 'Makanan';
 
-  // Cari di Firebase
-  const catData = menuCategories.find(c => c.name === namaLama);
-  if (catData && catData.id) {
-    await updateDoc(doc(db, "menuCategories", catData.id), { name: namaBaru });
-  }
-  // Update customCategories Map jika ada
-  if (customCategories.has(namaLama)) {
-    customCategories.delete(namaLama);
-    customCategories.set(namaBaru, grupLama);
-  }
-  renderKategoriTable();
+  if (!nama) return alert("Isi nama jenis menu!");
+  if (customCategories.has(nama)) return alert("Jenis '" + nama + "' sudah ada!");
+
+  await addDoc(collection(db, "menuCategories"), { name: nama, group: grup, createdAt: new Date().getTime() });
+  customCategories.set(nama, grup);
+  alert("Kategori '" + nama + "' tersimpan!");
+  namaInput.value = '';
   renderQuickMenuLists();
+  renderKategoriTable();
+};
+
+// Edit kategori - buka popup floating dengan data lama
+window.editKategori = function(namaLama, grupLama, docId) {
+  try {
+    const namaInput = document.getElementById('kategori-edit-nama');
+    const grupInput = document.getElementById('kategori-edit-grup');
+    const docIdInput = document.getElementById('kategori-edit-doc-id');
+    const popup = document.getElementById('kategori-edit-popup');
+
+    if (!popup || !namaInput || !grupInput || !docIdInput) {
+      return alert("Elemen form edit tidak ditemukan!");
+    }
+
+    namaInput.value = namaLama;
+    grupInput.value = grupLama;
+    docIdInput.value = docId || '';
+    popup.classList.remove('popup-hidden');
+  } catch(err) {
+    alert("Error membuka edit: " + err.message);
+    console.error(err);
+  }
+};
+
+// Tutup popup edit kategori
+window.closeKategoriEditPopup = function() {
+  document.getElementById('kategori-edit-popup').classList.add('popup-hidden');
+};
+
+// Simpan perubahan edit kategori (dari popup floating)
+window.simpanEditKategori = async function() {
+  const namaInput = document.getElementById('kategori-edit-nama');
+  const grupInput = document.getElementById('kategori-edit-grup');
+  const docIdInput = document.getElementById('kategori-edit-doc-id');
+  const nama = namaInput ? namaInput.value.trim() : '';
+  const grup = grupInput ? grupInput.value : 'Makanan';
+  const docId = docIdInput ? docIdInput.value : '';
+
+  if (!nama) return alert("Isi nama kategori!");
+
+  if (docId) {
+    await updateDoc(doc(db, "menuCategories", docId), { name: nama, group: grup });
+  }
+  alert("Kategori diupdate!");
+  closeKategoriEditPopup();
+  renderQuickMenuLists();
+  renderKategoriTable();
 };
 
 // Hapus kategori
@@ -592,45 +669,68 @@ window.hapusKategori = async function(nama, docId) {
   renderQuickMenuLists();
 };
 
-// Filter tampilan kategori per grup
-window.filterKategori = function(e, grup) {
-  if (e) e.preventDefault();
-  const makananSection = document.getElementById('kategori-makanan-section');
-  const minumanSection = document.getElementById('kategori-minuman-section');
-  const btnMakanan = document.getElementById('btn-filter-makanan');
-  const btnMinuman = document.getElementById('btn-filter-minuman');
-  const btnSemua = document.getElementById('btn-filter-semua');
+// Edit menu - buka popup floating dengan data menu
+window.editMenu = function(id) {
+  try {
+    const menu = menus.find(m => m.id === id);
+    if (!menu) return alert("Menu tidak ditemukan!");
 
-  if (!makananSection || !minumanSection) return;
+    const popup = document.getElementById('menu-edit-popup');
+    const idInput = document.getElementById('menu-edit-id');
+    const namaInput = document.getElementById('menu-edit-nama');
+    const catSel = document.getElementById('menu-edit-category');
+    const hargaInput = document.getElementById('menu-edit-harga');
 
-  // Reset button styles
-  [btnMakanan, btnMinuman, btnSemua].forEach(b => {
-    b.style.background = '#f3f4f6';
-    b.style.color = '#ea580c';
-    b.style.borderColor = '#ea580c';
-  });
+    if (!popup || !idInput || !namaInput || !catSel || !hargaInput) {
+      return alert("Elemen form edit tidak ditemukan!");
+    }
 
-  if (grup === 'Semua') {
-    makananSection.style.display = 'block';
-    minumanSection.style.display = 'block';
-    btnSemua.style.background = '#ea580c';
-    btnSemua.style.color = '#fff';
-  } else if (grup === 'Makanan') {
-    makananSection.style.display = 'block';
-    minumanSection.style.display = 'none';
-    btnMakanan.style.background = '#ea580c';
-    btnMakanan.style.color = '#fff';
-  } else if (grup === 'Minuman') {
-    makananSection.style.display = 'none';
-    minumanSection.style.display = 'block';
-    btnMinuman.style.background = '#ea580c';
-    btnMinuman.style.color = '#fff';
+    idInput.value = menu.id;
+    namaInput.value = menu.name || '';
+    hargaInput.value = menu.price || '';
+    
+    const allCats = [...new Set([...menuCategories.map(c => c.name), ...Array.from(customCategories.keys())])];
+    catSel.innerHTML = allCats.map(c => `<option value="${c}">${c}</option>`).join('');
+    
+    const cats = Array.isArray(menu.category) ? menu.category : [(menu.category || 'Makanan')];
+    catSel.value = cats[0] || 'Makanan';
+    
+    popup.classList.remove('popup-hidden');
+  } catch(err) {
+    alert("Error membuka edit: " + err.message);
+    console.error(err);
   }
+};
+
+// Tutup popup edit menu
+window.closeMenuEditPopup = function() {
+  document.getElementById('menu-edit-popup').classList.add('popup-hidden');
+};
+
+// Simpan perubahan edit menu (dari popup floating)
+window.simpanEditMenu = async function() {
+  const idInput = document.getElementById('menu-edit-id');
+  const namaInput = document.getElementById('menu-edit-nama');
+  const catSel = document.getElementById('menu-edit-category');
+  const hargaInput = document.getElementById('menu-edit-harga');
+  const id = idInput ? idInput.value : '';
+  const nama = namaInput ? namaInput.value.trim() : '';
+  const kategori = catSel ? catSel.value : 'Makanan';
+  const harga = window.parseRupiahInput(hargaInput ? hargaInput.value : '');
+
+  if (!id || !nama || harga <= 0) return alert("Isi semua data menu dengan benar!");
+
+  const categories = kategori ? ["Makanan", kategori] : ["Makanan"];
+
+  await updateDoc(doc(db, "menus", id), { name: nama, category: categories, price: harga });
+  alert("Menu diupdate!");
+  closeMenuEditPopup();
+  renderMenus();
 };
 
 // Buka halaman Kategori Menu (tab terpisah)
 window.openQuickMenuForm = function() {
-  switchTab('kategori', document.getElementById('btn-kategori'));
+  switchTab('kategori');
 };
 
 // Simpan kategori menu baru ke Firebase (di halaman Kategori terpisah)
@@ -689,6 +789,22 @@ window.updateQty = (id, delta) => {
   renderCart();
 };
 
+// Hitung harga efektif item keranjang setelah aturan diskon diterapkan
+function getCartItemEffectivePrice(cartItem) {
+  let price = cartItem.price;
+  let totalDisc = 0;
+  const hasTriggerInCart = discountRules.some(rule =>
+    cart.some(c => c.id === rule.triggerMenuId)
+  );
+  if (!hasTriggerInCart) return price;
+  discountRules.forEach(rule => {
+    if (rule.triggerMenuId && rule.targetMenuIds.includes(cartItem.id)) {
+      totalDisc += rule.discountAmount || 0;
+    }
+  });
+  return Math.max(0, price - totalDisc);
+}
+
 function renderCart() {
   const cartEl = document.getElementById('cart-items');
   if (!cartEl) return;
@@ -702,13 +818,15 @@ function renderCart() {
 
   let total = 0;
   cartEl.innerHTML = cart.map(c => {
-    const sub = c.price * c.qty;
+    const effPrice = getCartItemEffectivePrice(c);
+    const sub = effPrice * c.qty;
     total += sub;
-   return `
+    const disc = c.price - effPrice;
+    return `
   <div class="cart-row">
     <div>
       <b>${c.name} x ${c.qty}</b>${c.priceNote ? `<span class="cart-customer-badge">${c.priceNote}</span>` : ''}<br>
-      <small>${rupiah(c.price)} </small>
+      <small>${rupiah(effPrice)}${disc > 0 ? ` (diskon ${rupiah(disc)})` : ''} </small>
       <button class="edit-price-btn" onclick="event.stopPropagation(); openEditPrice('${c.id}', ${c.price})">Edit</button>
     </div>
     <div class="qty-controls">
@@ -726,7 +844,7 @@ function renderCart() {
 
 window.hitungKembalian = () => {
   if (selectedChannel === 'Online') return;
-  const total = cart.reduce((sum, c) => sum + (c.price * c.qty), 0);
+  const total = cart.reduce((sum, c) => sum + (getCartItemEffectivePrice(c) * c.qty), 0);
   const cashPaidEl = document.getElementById('cash-paid');
   const disp = document.getElementById('change-display');
   if (!cashPaidEl || !disp) return;
@@ -741,7 +859,7 @@ window.hitungKembalian = () => {
 // Hitung dan tampilkan potongan (%) dan rupiah untuk mode Online
 window.hitungDiskonOnline = () => {
   if (selectedChannel !== 'Online') return;
-  const total = cart.reduce((sum, c) => sum + (c.price * c.qty), 0);
+  const total = cart.reduce((sum, c) => sum + (getCartItemEffectivePrice(c) * c.qty), 0);
   const setoranEl = document.getElementById('online-total-setoran');
   const infoEl = document.getElementById('online-discount-info');
   const pctEl = document.getElementById('online-discount-pct');
@@ -772,7 +890,7 @@ window.simpanTransaksi = async () => {
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-CA');
   const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-  const total = cart.reduce((sum, c) => sum + (c.price * c.qty), 0);
+  const total = cart.reduce((sum, c) => sum + (getCartItemEffectivePrice(c) * c.qty), 0);
   const itemsText = cart.map(c => `${c.name} (${c.qty}x)`).join(", ");
 
   // Ambil data pelanggan online jika mode Online
@@ -802,7 +920,7 @@ window.simpanTransaksi = async () => {
     customerName: onlineCustomerName || selectedCustomerName || 'Umum',
     deliveryApp: onlineDeliveryApp || null,
     totalSetoran: selectedChannel === 'Online' ? onlineTotalSetoran : null,
-    items: cart,
+    items: cart.map(c => ({ ...c, price: getCartItemEffectivePrice(c) })),
     itemsText,
     total
   });
@@ -1080,7 +1198,7 @@ window.renderPriceList = () => {
         <div class="price-list-item">
           <div class="price-info">
             <div class="price-name">${m.name}</div>
-            <div class="price-category">${m.category || 'Makanan'}</div>
+            <div class="price-category">${Array.isArray(m.category) ? m.category.join(', ') : (m.category || 'Makanan')}</div>
             <div style="font-size:0.8rem; color:#6b7280; margin-top:2px;">Harga Default: ${rupiah(m.price)}</div>
           </div>
           <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
@@ -1407,9 +1525,250 @@ window.simpanHargaPelanggan = async (menuId) => {
 };
 
 
+// ================= MULTI-SELECT MENU (tombol "+") =================
+let menuMultiGroup = 'Makanan';
+let menuMultiMode = 'cart'; // 'cart' atau 'diskon'
+let menuMultiSubcatFilter = ''; // '' = tampilkan semua (tidak difilter sub kategori)
+let selectedMenuMulti = new Set();
+
+// Buka popup pilihan multi menu -> langsung tampilkan semua menu (filter semua)
+window.openMenuMultiPopup = (group, mode) => {
+  menuMultiMode = mode || 'cart';
+  menuMultiGroup = group || 'Makanan';
+  if (menuMultiMode === 'cart') {
+    menuMultiSubcatFilter = '';
+    selectedMenuMulti.clear();
+  }
+  const popup = document.getElementById('menu-multi-popup');
+  if (!popup) return;
+  const search = document.getElementById('menu-multi-search');
+  if (search) search.value = '';
+  // tandai tombol utama aktif
+  document.querySelectorAll('.main-filter-btn').forEach(b => b.classList.remove('active'));
+  const mainBtn = Array.from(document.querySelectorAll('.main-filter-btn')).find(
+    b => b.textContent.includes(menuMultiGroup));
+  if (mainBtn) mainBtn.classList.add('active');
+  renderMenuMultiSubcatFilters();
+  renderMenuMultiList();
+  popup.classList.remove('popup-hidden');
+};
+
+// Tutup popup multi menu
+window.closeMenuMultiPopup = () => {
+  const popup = document.getElementById('menu-multi-popup');
+  if (popup) popup.classList.add('popup-hidden');
+  selectedMenuMulti.clear();
+  menuMultiMode = 'cart';
+};
+
+// Pilih filter utama Makanan/Minuman -> reset sub filter, tampilkan semua menu grup tsb
+window.setMenuMultiGroup = (group, btn) => {
+  menuMultiGroup = group;
+  if (menuMultiMode === 'cart') {
+    menuMultiSubcatFilter = '';
+    selectedMenuMulti.clear();
+  }
+  document.querySelectorAll('.main-filter-btn').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const search = document.getElementById('menu-multi-search');
+  if (search) search.value = '';
+  renderMenuMultiSubcatFilters();
+  renderMenuMultiList();
+};
+
+// Pilih sub kategori (jenis dari input admin) -> saring daftar menu
+window.setMenuMultiSubcatFilter = (s) => {
+  menuMultiSubcatFilter = s;
+  if (menuMultiMode === 'cart') selectedMenuMulti.clear();
+  renderMenuMultiSubcatFilters();
+  renderMenuMultiList();
+};
+
+// Render tombol filter sub kategori (jenis kategori) untuk grup yang aktif
+window.renderMenuMultiSubcatFilters = () => {
+  const container = document.getElementById('menu-multi-subcat-filters');
+  if (!container) return;
+  const subcats = [...new Set(menuCategories.filter(c => c.group === menuMultiGroup).map(c => c.name))];
+  let html = `<button type="button" class="subcat-chip ${menuMultiSubcatFilter === '' ? 'active' : ''}" onclick="setMenuMultiSubcatFilter('')">Semua</button>`;
+  subcats.forEach(s => {
+    html += `<button type="button" class="subcat-chip ${menuMultiSubcatFilter === s ? 'active' : ''}" onclick="setMenuMultiSubcatFilter('${String(s).replace(/'/g, "\\'")}')">${String(s)}</button>`;
+  });
+  container.innerHTML = html;
+};
+
+// Render daftar menu multi-select (dikombinasikan filter grup + sub kategori + pencarian)
+// Saat pertama kali dibuka, menuMultiSubcatFilter = '' sehingga semua menu ditampilkan
+window.renderMenuMultiList = () => {
+  const container = document.getElementById('menu-multi-items');
+  const countEl = document.getElementById('menu-multi-count');
+  if (!container) return;
+  const term = (document.getElementById('menu-multi-search').value || '').toLowerCase();
+  const filtered = menus.filter(m => {
+    const cats = Array.isArray(m.category) ? m.category : [(m.category || 'Makanan')];
+    if (!cats.includes(menuMultiGroup)) return false;
+    if (menuMultiSubcatFilter && !cats.includes(menuMultiSubcatFilter)) return false;
+    return m.name.toLowerCase().includes(term);
+  });
+
+  const totalMenu = filtered.length;
+  const terpilih = selectedMenuMulti.size;
+  if (countEl) countEl.textContent = `Ditemukan ${totalMenu} menu • ${terpilih} dipilih`;
+
+  if (filtered.length === 0) {
+    container.innerHTML = `<p style="color:#9ca3af; font-size:0.85rem; padding:10px;">Tidak ada menu.</p>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(m => {
+    const cats = Array.isArray(m.category) ? m.category : [(m.category || 'Makanan')];
+    const subcat = cats.find(c => c !== menuMultiGroup) || '-';
+    const checked = selectedMenuMulti.has(m.id) ? 'checked' : '';
+    const selClass = selectedMenuMulti.has(m.id) ? 'selected' : '';
+    const safeId = String(m.id).replace(/'/g, "\\'");
+    return `
+      <label class="multi-menu-item ${selClass}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid #f3f4f6;cursor:pointer;">
+        <input type="checkbox" value="${safeId}" onchange="toggleMenuMulti('${safeId}')" ${checked} style="width:18px;height:18px;" />
+        <div style="flex:1;">
+          <div class="menu-name" style="margin-bottom:2px;">${String(m.name)}</div>
+          <div style="font-size:0.8rem;color:#6b7280;">${String(subcat)} • ${rupiah(m.price)}</div>
+        </div>
+      </label>
+    `;
+  }).join('');
+};
+
+// Toggle pilihan satu menu (multi-select)
+window.toggleMenuMulti = (id) => {
+  if (selectedMenuMulti.has(id)) selectedMenuMulti.delete(id);
+  else selectedMenuMulti.add(id);
+  const countEl = document.getElementById('menu-multi-count');
+  if (countEl) countEl.textContent = `Ditemukan ${document.getElementById('menu-multi-items').querySelectorAll('.multi-menu-item').length} menu • ${selectedMenuMulti.size} dipilih`;
+  renderMenuMultiList();
+};
+
+// Tambahkan semua menu yang dipilih ke keranjang (mode cart) atau ke daftar diskon (mode diskon)
+window.addMultiToCart = () => {
+  if (selectedMenuMulti.size === 0) return alert("Pilih minimal 1 menu!");
+
+  if (menuMultiMode === 'diskon') {
+    selectedMenuMulti.forEach(id => {
+      const menu = menus.find(m => m.id === id);
+      if (menu && !discountItems.find(d => d.id === id)) {
+        discountItems.push({ ...menu });
+      }
+    });
+    closeMenuMultiPopup();
+    renderDiskonBar();
+    menuMultiMode = 'cart';
+    return;
+  }
+
+  selectedMenuMulti.forEach(id => addToCart(id));
+  closeMenuMultiPopup();
+};
+
+// ================= DISKON BAR (tombol mata 👁 di samping Diskon +) =================
+
+// Render tampilan bar diskon (tombol mata + jumlah item)
+window.renderDiskonBar = () => {
+  const eyeBtn = document.getElementById('btn-diskon-eye');
+  const countEl = document.getElementById('diskon-count');
+  const amountWrapper = document.getElementById('diskon-amount-wrapper');
+  if (!eyeBtn || !countEl) return;
+  const n = discountItems.length;
+  countEl.textContent = n + ' item';
+  eyeBtn.style.display = n > 0 ? 'flex' : 'none';
+  if (amountWrapper) amountWrapper.style.display = n > 0 ? 'block' : 'none';
+};
+
+// Tampilkan / sembunyikan panel daftar item diskon
+window.toggleDiskonView = () => {
+  const panel = document.getElementById('diskon-panel');
+  if (!panel) return;
+  const isHidden = panel.style.display === 'none';
+  panel.style.display = isHidden ? 'block' : 'none';
+  renderDiskonItems();
+};
+
+// Render daftar item di dalam panel diskon
+window.renderDiskonItems = () => {
+  const container = document.getElementById('diskon-items-list');
+  if (!container) return;
+  if (discountItems.length === 0) {
+    container.innerHTML = `<p style="color:#9ca3af; font-size:0.85rem; padding:8px;">Belum ada item diskon.</p>`;
+    return;
+  }
+  container.innerHTML = discountItems.map((d, i) => `
+    <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:6px; background:#fffbeb;">
+      <div>
+        <div style="font-weight:600; font-size:0.85rem;">${d.name}</div>
+        <div style="font-size:0.75rem; color:#6b7280;">${rupiah(d.price)}</div>
+      </div>
+      <button type="button" onclick="hapusDiskon(${i})" style="padding:4px 8px; background:#fee2e2; color:#dc2626; border:none; border-radius:4px; font-size:0.75rem; cursor:pointer;">Hapus</button>
+    </div>
+  `).join('');
+};
+
+// Hapus satu item diskon berdasarkan index
+window.hapusDiskon = (index) => {
+  discountItems.splice(index, 1);
+  renderDiskonBar();
+  renderDiskonItems();
+  if (discountItems.length === 0) {
+    const panel = document.getElementById('diskon-panel');
+    if (panel) panel.style.display = 'none';
+  }
+};
+
+// Hapus semua item diskon
+window.hapusSemuaDiskon = () => {
+  discountItems = [];
+  renderDiskonBar();
+  renderDiskonItems();
+  const panel = document.getElementById('diskon-panel');
+  if (panel) panel.style.display = 'none';
+};
+
+// Simpan aturan diskon (trigger = menu yang sedang dibuat di form Tambah Menu)
+window.simpanDiskon = () => {
+  if (discountItems.length === 0) return alert("Pilih minimal 1 item target diskon!");
+  const diskonAmount = window.parseRupiahInput(document.getElementById('diskon-amount')?.value || '0');
+  if (!diskonAmount || diskonAmount <= 0) return alert("Masukkan nominal diskon!");
+
+  const triggerName = document.getElementById('new-menu-name')?.value.trim() || '';
+  if (!triggerName) return alert("Isi nama menu trigger (misal: ketoprak) di form Tambah Menu!");
+
+  const triggerMenu = menus.find(m => m.name === triggerName);
+  if (!triggerMenu) return alert("Menu trigger '" + triggerName + "' belum tersimpan. Simpan menu dulu!");
+
+  // Cek duplikasi aturan (trigger + target sama)
+  const exists = discountRules.some(r =>
+    r.triggerMenuId === triggerMenu.id &&
+    r.targetMenuIds.length === discountItems.length &&
+    r.targetMenuIds.every(id => discountItems.includes(id))
+  );
+  if (exists) return alert("Aturan diskon untuk menu ini dan target yang sama sudah ada!");
+
+  addDoc(collection(db, "discountRules"), {
+    triggerMenuId: triggerMenu.id,
+    triggerMenuName: triggerMenu.name,
+    targetMenuIds: discountItems.map(d => d.id),
+    discountAmount: diskonAmount,
+    createdAt: new Date().getTime()
+  }).then(() => {
+    discountItems = [];
+    renderDiskonBar();
+    renderDiskonItems();
+    const diskonAmountInput = document.getElementById('diskon-amount');
+    if (diskonAmountInput) diskonAmountInput.value = "";
+    alert("Aturan diskon disimpan!");
+  }).catch(err => {
+    alert("Gagal simpan diskon: " + err.message);
+  });
+};
+
 // Inisialisasi saat halaman pertama kali dimuat
-document.addEventListener('DOMContentLoaded', async () => {
-  // Inisialisasi nextCustomerNumber dari customers collection (Offline ONLY)
+document.addEventListener('DOMContentLoaded', async () => {  // Inisialisasi nextCustomerNumber dari customers collection (Offline ONLY)
   try {
     const snap = await getDocs(collection(db, "customers"));
     let maxNum = 0;

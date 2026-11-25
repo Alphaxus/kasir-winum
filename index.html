@@ -85,7 +85,7 @@
                             </div>
                             <div class="menu-category-dropdown-wrapper"
                                 style="position:relative; display:inline-block; width:100%;">
-                                <div class="menu-category-add-section" onclick="toggleCategory('makanan', this)">
+                                <div class="menu-category-add-section" onclick="openMenuMultiPopup('Makanan')">
                                     <div class="menu-category-logo">🍔</div>
                                     <div class="menu-category-add-label">+ Tambah Makanan</div>
                                     <span class="menu-category-toggle">▼</span>
@@ -108,7 +108,7 @@
                             </div>
                             <div class="menu-category-dropdown-wrapper"
                                 style="position:relative; display:inline-block; width:100%;">
-                                <div class="menu-category-add-section" onclick="toggleCategory('minuman', this)">
+                                <div class="menu-category-add-section" onclick="openMenuMultiPopup('Minuman')">
                                     <div class="menu-category-logo">🥤</div>
                                     <div class="menu-category-add-label">+ Tambah Minuman</div>
                                     <span class="menu-category-toggle">▼</span>
@@ -159,7 +159,7 @@
                             </div>
                             <div class="menu-category-dropdown-wrapper"
                                 style="position:relative; display:inline-block; width:100%;">
-                                <div class="menu-category-add-section" onclick="toggleCategory('makanan', this)">
+                                <div class="menu-category-add-section" onclick="openMenuMultiPopup('Makanan')">
                                     <div class="menu-category-logo">🍔</div>
                                     <div class="menu-category-add-label">+ Tambah Makanan</div>
                                     <span class="menu-category-toggle">▼</span>
@@ -182,7 +182,7 @@
                             </div>
                             <div class="menu-category-dropdown-wrapper"
                                 style="position:relative; display:inline-block; width:100%;">
-                                <div class="menu-category-add-section" onclick="toggleCategory('minuman', this)">
+                                <div class="menu-category-add-section" onclick="openMenuMultiPopup('Minuman')">
                                     <div class="menu-category-logo">🥤</div>
                                     <div class="menu-category-add-label">+ Tambah Minuman</div>
                                     <span class="menu-category-toggle">▼</span>
@@ -283,6 +283,35 @@
                   <input type="text" inputmode="decimal" id="new-menu-price" placeholder="Harga Default (contoh: 12 = 12.000)" onfocus="focusRupiahInput(this)" onclick="focusRupiahInput(this)" />
 <button type="button" onclick="kaliSeribu(document.getElementById('new-menu-price'))">×1000</button>
 </div>
+
+                <!-- Bar Diskon: tombol Diskon + dan tombol mata (👁) di sebelah kanan -->
+                <div class="diskon-bar" style="display:flex; align-items:center; gap:8px; margin:12px 0; padding:10px 12px; background:#fffbeb; border:1px solid #fcd34d; border-radius:10px;">
+                    <button type="button" id="btn-diskon-add" onclick="openMenuMultiPopup('Makanan', 'diskon')" style="flex:1; padding:10px 14px; background:#ea580c; color:#fff; border:none; border-radius:8px; font-weight:700; font-size:0.95rem; display:flex; align-items:center; justify-content:center; gap:6px; cursor:pointer;">
+                        Diskon <span style="font-size:1.15rem;">+</span>
+                    </button>
+                    <button type="button" id="btn-diskon-eye" onclick="toggleDiskonView()" style="width:44px; height:44px; background:#d97706; color:#fff; border:none; border-radius:8px; font-size:1.4rem; display:flex; align-items:center; justify-content:center; cursor:pointer; display:none;" title="Lihat item diskon">
+                        👁️
+                    </button>
+                    <span id="diskon-count" style="font-size:0.8rem; color:#92400e; font-weight:600; margin-left:auto;">0 item</span>
+                </div>
+
+                <!-- Nominal Diskon per Item (muncul hanya setelah ada item target diskon) -->
+                <div id="diskon-amount-wrapper" style="display:none; margin-top:8px;">
+                    <div style="font-size:0.75rem; color:#6b7280; margin-bottom:4px;">Nominal Diskon per Item</div>
+                    <div class="price-row">
+                        <input type="text" inputmode="decimal" id="diskon-amount" placeholder="Contoh: 2 = 2.000" onfocus="focusRupiahInput(this)" onclick="focusRupiahInput(this)" />
+                        <button type="button" onclick="kaliSeribu(document.getElementById('diskon-amount'))">×1000</button>
+                    </div>
+                </div>
+
+                <div id="diskon-panel" style="display:none; margin-top:8px; padding:10px 12px; background:#fffbeb; border:1px solid #fcd34d; border-radius:10px; max-height:260px; overflow-y:auto;">
+                    <div style="font-size:0.75rem; color:#6b7280; margin-bottom:6px; font-weight:600;">Item Diskon (target yang akan dikurangi harganya)</div>
+                    <div id="diskon-items-list"></div>
+                    <div style="margin-top:10px; display:flex; gap:8px;">
+                        <button type="button" onclick="hapusSemuaDiskon()" style="flex:1; padding:8px; background:#fee2e2; color:#dc2626; border:none; border-radius:6px; font-size:0.85rem; cursor:pointer;">Hapus Semua</button>
+                    </div>
+                </div>
+
                 <button class="btn-primary" onclick="tambahMenu()">+ Tambah Menu</button>
             </div>
 
@@ -342,36 +371,65 @@
             </div>
             <div style="margin-top:16px;">
                 <h4 style="font-size:0.85rem; color:#374151; margin-bottom:8px;">Daftar Kategori Tersimpan</h4>
-                <div style="display:flex; gap:8px; margin-bottom:10px;">
-                    <button type="button" onclick="filterKategori(event, 'Makanan')" id="btn-filter-makanan" style="flex:1;padding:8px;background:#f3f4f6;border:2px solid #ea580c;border-radius:6px;color:#ea580c;font-weight:700;cursor:pointer;">Makanan</button>
-                    <button type="button" onclick="filterKategori(event, 'Minuman')" id="btn-filter-minuman" style="flex:1;padding:8px;background:#f3f4f6;border:2px solid #ea580c;border-radius:6px;color:#ea580c;font-weight:700;cursor:pointer;">Minuman</button>
-                    <button type="button" onclick="filterKategori(event, 'Semua')" id="btn-filter-semua" style="flex:1;padding:8px;background:#ea580c;border:2px solid #ea580c;border-radius:6px;color:#fff;font-weight:700;cursor:pointer;">Semua</button>
+                <table id="kategori-table" style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                    <thead>
+                        <tr style="text-align:left;">
+                            <th style="padding:8px; border-bottom:2px solid #e5e7eb; color:#6b7280;">Nama Kategori</th>
+                            <th style="padding:8px; border-bottom:2px solid #e5e7eb; color:#6b7280; width:120px;">Grup</th>
+                            <th style="padding:8px; border-bottom:2px solid #e5e7eb; color:#6b7280; width:120px;">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kategori-table-body"></tbody>
+                </table>
+                <p id="kategori-empty" style="color:#9ca3af; font-size:0.8rem; margin-top:8px; display:none;">Belum ada kategori tersimpan.</p>
+            </div>
+        </div>
+
+        <!-- Floating Edit Kategori Popup -->
+        <div id="kategori-edit-popup" class="popup-overlay popup-hidden" onclick="closeKategoriEditPopup()">
+            <div class="popup-box" onclick="event.stopPropagation()">
+                <div class="popup-title">Edit Kategori</div>
+                <input type="hidden" id="kategori-edit-doc-id" />
+                <div style="margin-bottom:10px;">
+                    <div style="font-size:0.75rem;color:#6b7280;margin-bottom:4px;">Nama Kategori</div>
+                    <input type="text" id="kategori-edit-nama" placeholder="Nama kategori" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;" />
                 </div>
-                <div id="kategori-makanan-section" style="margin-bottom:12px;">
-                    <h5 style="font-size:0.8rem;color:#6b7280;margin-bottom:6px;">Makanan</h5>
-                    <table id="kategori-table-makanan" style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-                        <thead>
-                            <tr style="text-align:left;">
-                                <th style="padding:8px; border-bottom:2px solid #e5e7eb; color:#6b7280;">Nama Kategori</th>
-                                <th style="padding:8px; border-bottom:2px solid #e5e7eb; color:#6b7280; width:100px;">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="kategori-table-body-makanan"></tbody>
-                    </table>
+                <div style="margin-bottom:12px;">
+                    <div style="font-size:0.75rem;color:#6b7280;margin-bottom:4px;">Grup</div>
+                    <select id="kategori-edit-grup" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;">
+                        <option value="Makanan">Makanan</option>
+                        <option value="Minuman">Minuman</option>
+                    </select>
                 </div>
-                <div id="kategori-minuman-section" style="margin-bottom:12px;">
-                    <h5 style="font-size:0.8rem;color:#6b7280;margin-bottom:6px;">Minuman</h5>
-                    <table id="kategori-table-minuman" style="width:100%; border-collapse:collapse; font-size:0.85rem;">
-                        <thead>
-                            <tr style="text-align:left;">
-                                <th style="padding:8px; border-bottom:2px solid #e5e7eb; color:#6b7280;">Nama Kategori</th>
-                                <th style="padding:8px; border-bottom:2px solid #e5e7eb; color:#6b7280; width:100px;">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody id="kategori-table-body-minuman"></tbody>
-                    </table>
+                <div class="popup-actions">
+                    <button onclick="closeKategoriEditPopup()">Batal</button>
+                    <button class="btn-simpan" onclick="simpanEditKategori()">Simpan</button>
                 </div>
-                <p id="kategori-empty" style="color:#9ca3af; font-size:0.8rem; margin-top:8px; display:none; text-align:center;">Belum ada kategori tersimpan.</p>
+            </div>
+        </div>
+
+    <!-- Floating Edit Menu Popup -->
+    <div id="menu-edit-popup" class="popup-overlay popup-hidden" onclick="closeMenuEditPopup()">
+            <div class="popup-box" onclick="event.stopPropagation()">
+                <div class="popup-title">Edit Menu</div>
+                <input type="hidden" id="menu-edit-id" />
+                <div style="margin-bottom:10px;">
+                    <div style="font-size:0.75rem;color:#6b7280;margin-bottom:4px;">Nama Menu</div>
+                    <input type="text" id="menu-edit-nama" placeholder="Nama menu" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;" />
+                </div>
+                <div style="margin-bottom:10px;">
+                    <div style="font-size:0.75rem;color:#6b7280;margin-bottom:4px;">Kategori</div>
+                    <select id="menu-edit-category" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;"></select>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <div style="font-size:0.75rem;color:#6b7280;margin-bottom:4px;">Harga Default</div>
+                    <input type="text" inputmode="decimal" id="menu-edit-harga" placeholder="Harga default" style="width:100%;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;" onfocus="focusRupiahInput(this)" onclick="focusRupiahInput(this)" />
+<button type="button" onclick="kaliSeribu(document.getElementById('menu-edit-harga'))">×1000</button>
+                </div>
+                <div class="popup-actions">
+                    <button onclick="closeMenuEditPopup()">Batal</button>
+                    <button class="btn-simpan" onclick="simpanEditMenu()">Simpan</button>
+                </div>
             </div>
         </div>
     </div>
@@ -401,6 +459,43 @@
         </div>
     </div>
     <div id="popup-backdrop" class="popup-backdrop" style="display:none;" onclick="closeEditPrice()"></div>
+
+    <!-- Multi-select Menu Popup: buka langsung ke daftar semua menu, filter sub kategori tersedia -->
+    <div id="menu-multi-popup" class="popup-overlay popup-hidden" onclick="closeMenuMultiPopup()">
+        <div class="popup-box" onclick="event.stopPropagation()">
+            <div class="popup-title">Pilih Menu</div>
+
+            <!-- Filter utama Makanan / Minuman -->
+            <div id="menu-multi-step-main" style="margin-bottom:10px;">
+                <div style="font-size:0.75rem;color:#6b7280;margin-bottom:8px;">Jenis Utama</div>
+                <div style="display:flex;gap:8px;">
+                    <button type="button" class="main-filter-btn active" onclick="setMenuMultiGroup('Makanan', this)">🍔 Makanan</button>
+                    <button type="button" class="main-filter-btn" onclick="setMenuMultiGroup('Minuman', this)">🥤 Minuman</button>
+                </div>
+            </div>
+
+            <!-- Filter sub kategori (jenis dari input admin), "Semua" = tampilkan semua -->
+            <div id="menu-multi-step-subcat" style="margin-bottom:10px;">
+                <div style="font-size:0.75rem;color:#6b7280;margin-bottom:6px;">Filter Jenis Kategori</div>
+                <div id="menu-multi-subcat-filters" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+            </div>
+
+            <!-- Daftar item multi-pilihan -->
+            <div id="menu-multi-step-items">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+                    <input type="text" id="menu-multi-search" placeholder="Cari nama menu..." oninput="renderMenuMultiList()"
+                        style="flex:1;padding:8px;border:1px solid #d1d5db;border-radius:6px;font-size:0.9rem;" />
+                </div>
+                <div id="menu-multi-items" style="max-height:340px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;"></div>
+                <div id="menu-multi-count" style="font-size:0.75rem;color:#6b7280;margin-top:6px;"></div>
+            </div>
+
+            <div class="popup-actions" style="margin-top:12px;">
+                <button onclick="closeMenuMultiPopup()">Batal</button>
+                <button class="btn-simpan" id="menu-multi-add-btn" onclick="addMultiToCart()">Tambah Diskon</button>
+            </div>
+        </div>
+    </div>
     <script type="module" src="script.js"></script>
 </body>
 

@@ -522,8 +522,13 @@ button { cursor: pointer; border: none; border-radius: 8px; font-weight: 600; tr
   padding: 16px;
   border-radius: 12px;
   width: 90%;
-  max-width: 320px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  max-width: 400px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  box-sizing: border-box;
+}
+
+.popup-hidden {
+  display: none !important;
 }
 .popup-title {
   font-weight: 600;
@@ -611,3 +616,39 @@ nav span { font-size: 1.2rem; }
 }
 
 /* Delivery App badge in laporan */
+.subcat-chip {
+  padding: 4px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 20px;
+  background: #fff;
+  font-size: 0.8rem;
+  color: #4b5563;
+  cursor: pointer;
+}
+.subcat-chip.active {
+  border-color: #ea580c;
+  background: #fff7ed;
+  color: #ea580c;
+  font-weight: 600;
+}
+.main-filter-btn {
+  flex: 1;
+  padding: 10px;
+  border: 2px solid #e5e7eb;
+  background: #fff;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  color: #4b5563;
+  font-weight: 600;
+  cursor: pointer;
+}
+.main-filter-btn.active {
+  border-color: #ea580c;
+  background: #fff7ed;
+  color: #ea580c;
+}
+.multi-menu-item.selected {
+  background: #f0fdf4;
+  border: 1px solid #16a34a;
+  border-radius: 8px;
+}
